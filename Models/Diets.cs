@@ -8,7 +8,11 @@ public class Diets
     
     public string Description { get; set; }
     
+    public int Age { get; set; }
+    
+    public decimal ForWeight { get; set; }
+    
     public decimal CaloricValue { get; set; }
     
-    public SexEnum[] ForSex { get; set; }
+    public SexEnum ForSex { get; set; }
 }
