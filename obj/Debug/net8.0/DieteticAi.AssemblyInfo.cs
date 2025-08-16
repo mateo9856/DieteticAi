@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DieteticAi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e941811ffe00a62e729b451f7d522acc325ff07b")]
 [assembly: System.Reflection.AssemblyProductAttribute("DieteticAi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DieteticAi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
