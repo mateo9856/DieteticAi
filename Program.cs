@@ -19,9 +19,9 @@ class Program
         
         Console.WriteLine("Enter your data, first age, next weight and last sex(type Male, Female or Unbinary)");
         
-        var age = int.Parse(Console.ReadLine());
-        var weight = decimal.Parse(Console.ReadLine());
-        var sex = Enum.Parse<SexEnum>(Console.ReadLine());
+        var age = int.Parse(Console.ReadLine() ?? "0");
+        var weight = decimal.Parse(Console.ReadLine() ?? "0");
+        var sex = Enum.Parse<SexEnum>(Console.ReadLine() ?? "Unbinary");
 
         var dto = new HumanDataDto
         {

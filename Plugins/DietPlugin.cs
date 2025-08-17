@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text;
 using System.Text.Json;
 using DieteicAi.Models;
 using Microsoft.SemanticKernel;
@@ -51,6 +50,7 @@ public class DietPlugin
         You are a diet planner.
         Generate a monthly diet plan in **JSON format** like this:
         {
+          ""Id"": ""..."",
           ""DietName"": ""..."",
           ""Description"": ""..."",
           ""Age"": ""..."",
@@ -59,7 +59,7 @@ public class DietPlugin
           ""ForSex"": ""..."",
 
         }
-        
+        Id must have a value eqaul to: " + (_diets.Count + 1) + @"
         DietName should return basically diet topic name and Description summary plan with calculated value.
         Rest of fields similar to input, only CaloricValue should return calculated daily caloric.
 
