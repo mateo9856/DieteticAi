@@ -1,4 +1,4 @@
-using DieteicAi.Models;
+using DieteticAi.Models;
 using DieteticAi.Plugins;
 using Microsoft.SemanticKernel;
 

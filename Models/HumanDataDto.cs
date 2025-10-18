@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace DieteicAi.Models;
+namespace DieteticAi.Models;
 
 public class HumanDataDto
 {

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
-using DieteicAi.Models;
+using DieteticAi.Models;
 using Microsoft.SemanticKernel;
 
 namespace DieteticAi.Plugins;

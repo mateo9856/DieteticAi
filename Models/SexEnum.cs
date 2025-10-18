@@ -1,4 +1,4 @@
-namespace DieteicAi.Models;
+namespace DieteticAi.Models;
 
 public enum SexEnum
 {
