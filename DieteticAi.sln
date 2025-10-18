@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DietAI.Kernel", "DieteticAi.Kernel\DietAI.Kernel.csproj", "{2B3FA714-88FB-4C33-B817-B84FCB5321E4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DietAI.Tests", "DietAI.Tests\DietAI.Tests.csproj", "{8BFDAA4C-CB90-44B1-86ED-DF63CCB46B74}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DieteticAI.UI", "DieteticAI.UI\DieteticAI.UI.csproj", "{AA51AABC-17B2-4A76-AF83-E56531AF5F32}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2B3FA714-88FB-4C33-B817-B84FCB5321E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B3FA714-88FB-4C33-B817-B84FCB5321E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B3FA714-88FB-4C33-B817-B84FCB5321E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B3FA714-88FB-4C33-B817-B84FCB5321E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BFDAA4C-CB90-44B1-86ED-DF63CCB46B74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BFDAA4C-CB90-44B1-86ED-DF63CCB46B74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BFDAA4C-CB90-44B1-86ED-DF63CCB46B74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BFDAA4C-CB90-44B1-86ED-DF63CCB46B74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA51AABC-17B2-4A76-AF83-E56531AF5F32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA51AABC-17B2-4A76-AF83-E56531AF5F32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA51AABC-17B2-4A76-AF83-E56531AF5F32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA51AABC-17B2-4A76-AF83-E56531AF5F32}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
