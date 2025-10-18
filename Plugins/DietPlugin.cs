@@ -44,7 +44,7 @@ public class DietPlugin
         return generatedDiet.Description;
     }
 
-    private Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, SexEnum sex)
+    protected virtual Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, SexEnum sex)
     {
         string promptBuilder = @"
         You are a diet planner.
@@ -77,6 +77,11 @@ public class DietPlugin
         });
 
         var returnedPlan = functionResult.ToString();
+        if (string.IsNullOrWhiteSpace(returnedPlan))
+        {
+            throw new Exception("Model returned empty response");
+        }
+
         try
         {
             JsonDocument.Parse(returnedPlan);
