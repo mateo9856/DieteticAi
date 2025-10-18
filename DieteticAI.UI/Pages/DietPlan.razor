@@ -1,0 +1,161 @@
+@page "/dietplan"
+
+<PageTitle>Diet Plan Generator</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>🥗 Diet Plan Generator</h1>
+                <p>Create your personalized diet plan based on your health data</p>
+            </div>
+
+            <!-- Diet Form -->
+            <div class="dietetic-form">
+                <EditForm Model="@humanData" OnValidSubmit="@GenerateDietPlan">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="age" class="form-label">Age</label>
+                            <InputNumber @bind-Value="humanData.Age" class="form-control" id="age" placeholder="Enter your age" />
+                            <ValidationMessage For="@(() => humanData.Age)" class="text-danger" />
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="weight" class="form-label">Current Weight (kg)</label>
+                            <InputNumber @bind-Value="humanData.ActualWeight" class="form-control" id="weight" placeholder="Enter your weight" step="0.1" />
+                            <ValidationMessage For="@(() => humanData.ActualWeight)" class="text-danger" />
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="sex" class="form-label">Gender</label>
+                        <InputSelect @bind-Value="humanData.Sex" class="form-select" id="sex">
+                            <option value="">Select your gender</option>
+                            <option value="@SexEnum.Male">Male</option>
+                            <option value="@SexEnum.Female">Female</option>
+                            <option value="@SexEnum.Unbinary">Non-binary</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => humanData.Sex)" class="text-danger" />
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg" disabled="@isGenerating">
+                            @if (isGenerating)
+                            {
+                                <span class="loading-spinner"></span>
+                                <span class="ms-2">Generating...</span>
+                            }
+                            else
+                            {
+                                <span>🍎 Generate Diet Plan</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+
+            <!-- Results Section -->
+            <div class="diet-results @(showResults ? "show" : "")">
+                <h2 class="text-center mb-4">📋 Your Personalized Diet Plan</h2>
+                
+                @if (generatedDiet != null)
+                {
+                    <div class="diet-card">
+                        <h4>🥗 @generatedDiet.DietName</h4>
+                        <p><strong>Description:</strong> @generatedDiet.Description</p>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <span class="diet-metric">Age: @generatedDiet.Age</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="diet-metric">Weight: @generatedDiet.ForWeight kg</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="diet-metric">Gender: @generatedDiet.ForSex</span>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <span class="diet-metric">Calories: @generatedDiet.CaloricValue kcal</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="diet-metric">ID: @generatedDiet.Id</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center">
+                        <p class="text-muted">No diet plan generated yet. Please fill out the form above and click "Generate Diet Plan".</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private HumanDataDto humanData = new HumanDataDto();
+    private Diets? generatedDiet;
+    private bool isGenerating = false;
+    private bool showResults = false;
+
+    private async Task GenerateDietPlan()
+    {
+        isGenerating = true;
+        showResults = false;
+        
+        try
+        {
+            // Simulate API call delay
+            await Task.Delay(2000);
+            
+            // TODO: Replace with actual DieteticAI.Kernel plugin call
+            // For now, create a sample diet plan
+            generatedDiet = new Diets
+            {
+                Id = 1,
+                DietName = "Balanced Mediterranean Diet",
+                Description = "A well-balanced diet focusing on whole grains, lean proteins, healthy fats, and plenty of fruits and vegetables. This plan is designed to support your health goals while providing all essential nutrients.",
+                Age = humanData.Age,
+                ForWeight = humanData.ActualWeight,
+                CaloricValue = CalculateCalories(humanData.Age, humanData.ActualWeight, humanData.Sex),
+                ForSex = humanData.Sex
+            };
+            
+            showResults = true;
+        }
+        catch (Exception ex)
+        {
+            // Handle error - you might want to show a toast notification
+            Console.WriteLine($"Error generating diet plan: {ex.Message}");
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+    
+    private decimal CalculateCalories(int age, decimal weight, SexEnum sex)
+    {
+        // Simple calorie calculation based on BMR
+        decimal bmr;
+        if (sex == SexEnum.Male)
+        {
+            bmr = 88.362m + (13.397m * weight) + (4.799m * age) - (5.677m * age);
+        }
+        else
+        {
+            bmr = 447.593m + (9.247m * weight) + (3.098m * age) - (4.330m * age);
+        }
+        
+        // Add activity factor (1.2 for sedentary)
+        return Math.Round(bmr * 1.2m, 0);
+    }
+}
