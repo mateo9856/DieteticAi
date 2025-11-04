@@ -44,7 +44,7 @@ public class DietPluginTests
             .Returns(existingPlan);
 
         // Act
-        var result = _dietPlugin.GetPlanFromListOrPrompt(30, 80m, SexEnum.Male);
+        var result = _dietPlugin.GetPlanFromListOrPrompt(30, 80m, SexEnum.Male, DietType.Keto);
 
         // Assert
         result.Should().Be("Existing plan");
@@ -69,7 +69,7 @@ public class DietPluginTests
             .Returns(mockResult);
 
         // Act
-        var result = _dietPlugin.GetPlanFromListOrPrompt(25, 70m, SexEnum.Female);
+        var result = _dietPlugin.GetPlanFromListOrPrompt(25, 70m, SexEnum.Female, DietType.HighProtein);
 
         // Assert
         result.Should().Be("Generated plan");
@@ -97,7 +97,7 @@ public class DietPluginTests
             .Returns(existingPlan);
 
         // Act - age 31 should match age 30 (within 2 year range)
-        var result = _dietPlugin.GetPlanFromListOrPrompt(31, 80m, SexEnum.Male);
+        var result = _dietPlugin.GetPlanFromListOrPrompt(31, 80m, SexEnum.Male, DietType.Standard);
 
         // Assert
         result.Should().Be("Existing plan");
@@ -123,7 +123,7 @@ public class DietPluginTests
             .Returns(existingPlan);
 
         // Act - weight 85 should match weight 80 (within 5kg range)
-        var result = _dietPlugin.GetPlanFromListOrPrompt(30, 85m, SexEnum.Male);
+        var result = _dietPlugin.GetPlanFromListOrPrompt(30, 85m, SexEnum.Male, DietType.GlutenFree);
 
         // Assert
         result.Should().Be("Existing plan");
@@ -149,7 +149,7 @@ public class DietPluginTests
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() => 
-            _dietPlugin.GetPlanFromListOrPrompt(25, 70m, SexEnum.Female));
+            _dietPlugin.GetPlanFromListOrPrompt(25, 70m, SexEnum.Female, DietType.LowFat));
         
         exception!.Message.Should().Be("Model returned empty response");
         _mockDiets.Received(1).FirstOrDefault(Arg.Any<Func<Diets, bool>>());
@@ -175,7 +175,7 @@ public class DietPluginTests
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() => 
-            _dietPlugin.GetPlanFromListOrPrompt(25, 70m, SexEnum.Female));
+            _dietPlugin.GetPlanFromListOrPrompt(25, 70m, SexEnum.Female, DietType.Vegan));
         
         exception!.Message.Should().Be("Error through Json parsing plan");
         _mockDiets.Received(1).FirstOrDefault(Arg.Any<Func<Diets, bool>>());

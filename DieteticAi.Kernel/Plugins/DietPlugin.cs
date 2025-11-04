@@ -24,8 +24,8 @@ public class DietPlugin
     public string GetPlanFromListOrPrompt(
         [Description("Age of the person")] int age,
         [Description("Current weight in kg")] decimal currentWeight,
-        [Description("Sex of the Person (Male/Female/Unbinary)")]
-        SexEnum sex
+        [Description("Sex of the Person (Male/Female/Unbinary)")] SexEnum sex,
+        [Description("Type of diet")]DietType dietType
     )
     {
         var ageCorrect = (int a) => age >= 15 && (age - a <= 2);
@@ -41,13 +41,13 @@ public class DietPlugin
             return findingPlan.Description;
         }
         
-        var generatedDiet = GenerateNewPlanForPrompt(age, currentWeight, sex);
+        var generatedDiet = GenerateNewPlanForPrompt(age, currentWeight, sex, dietType);
         _diets.Add(generatedDiet);
         
         return generatedDiet.Description;
     }
 
-    protected virtual Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, SexEnum sex)
+    protected virtual Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, SexEnum sex, DietType dietType)
     {
         string promptBuilder = @"
         You are a diet planner.
@@ -70,13 +70,15 @@ public class DietPlugin
         - Age: {{age}}
         - Weight: {{weight}} kg
         - Sex: {{sex}}
+        - DietType: {{dietType}}
         ";
 
         var functionResult = _kernel.CreateFunctionFromPrompt(promptBuilder).InvokeAsync(new KernelArguments
         {
             ["age"] = age,
             ["weight"] = currentWeight,
-            ["sex"] = sex.ToString()
+            ["sex"] = sex.ToString(),
+            ["dietType"] = dietType.ToString(),
         });
 
         var returnedPlan = functionResult.ToString();

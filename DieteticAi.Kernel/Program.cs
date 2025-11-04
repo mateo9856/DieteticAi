@@ -25,15 +25,17 @@ class Program
         var age = int.Parse(Console.ReadLine() ?? "0");
         var weight = decimal.Parse(Console.ReadLine() ?? "0");
         var sex = Enum.Parse<SexEnum>(Console.ReadLine() ?? "Unbinary");
-
+        var dietType = Enum.Parse<DietType>(Console.ReadLine() ?? "Standard");
+        
         var dto = new HumanDataDto
         {
             Age = age,
             ActualWeight = weight,
-            Sex = sex
+            Sex = sex,
+            DietType = dietType,
         };
 
-        var plan = dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.Sex);
+        var plan = dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.Sex, dto.DietType);
         
         Console.WriteLine($"Generated plan: \n{plan}");
 
