@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
 using FluentAssertions;
 using Microsoft.SemanticKernel;
 using NSubstitute;
-using NUnit.Framework;
 
 namespace DietAI.Tests;
 

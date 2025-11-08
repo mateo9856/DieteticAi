@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Text.Json;
 using DieteticAi.Models;
 using Microsoft.SemanticKernel;
@@ -119,6 +116,72 @@ public class DietPlugin
         {
             throw new Exception("Error through Json parsing plan");
         }
+    }
 
+    protected virtual Diets UpdatePlanForPrompt(int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
+    {
+        string promptBuilder = @"
+        You are a diet planner.
+        Update an existing monthly diet plan in **JSON format** like this:
+        {
+          ""Id"": ""..."",
+          ""DietName"": ""..."",
+          ""Description"": ""..."",
+          ""Age"": ""..."",
+          ""ForWeight"": ""..."",
+          ""ForHeight"": ""..."",
+          ""CaloricValue"": ""..."",
+          ""ForSex"": ""..."",
+          ""DietType"": ""...""
+        }
+        Id must have a value equal to: " + (_diets.Count + 1) + @"
+        DietName should return updated diet topic name and Description should reflect the changes from previous to current values.
+        Rest of fields should match current input values, only CaloricValue should return calculated daily caloric based on current values.
+
+        Previous values:
+        - Previous Weight: {{previousWeight}} kg
+        - Previous Height: {{previousHeight}} cm
+        - Previous Caloric Demand: {{previousCaloricDemand}} kcal
+
+        Current values:
+        - Age: {{age}}
+        - Weight: {{weight}} kg
+        - Height: {{height}} cm
+        - Sex: {{sex}}
+        - DietType: {{dietType}}
+        - CaloricDemand: {{caloricDemand}} kcal
+        ";
+
+        var kernelArguments = new KernelArguments
+        {
+            ["age"] = age,
+            ["weight"] = actualWeight,
+            ["height"] = actualHeight,
+            ["sex"] = sex.ToString(),
+            ["dietType"] = dietType.ToString(),
+            ["caloricDemand"] = caloricDemand.ToString(),
+            ["previousWeight"] = previousWeight.ToString(),
+            ["previousHeight"] = previousHeight.ToString(),
+            ["previousCaloricDemand"] = previousCaloricDemand.ToString()
+        };
+
+        var functionResult = _kernel.CreateFunctionFromPrompt(promptBuilder).InvokeAsync(kernelArguments);
+
+        var returnedPlan = functionResult.ToString();
+        if (string.IsNullOrWhiteSpace(returnedPlan))
+        {
+            throw new Exception("Model returned empty response");
+        }
+
+        try
+        {
+            JsonDocument.Parse(returnedPlan);
+            return JsonSerializer.Deserialize<Diets>(returnedPlan) 
+                   ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
+        }
+        catch
+        {
+            throw new Exception("Error through Json parsing plan");
+        }
     }
 }
