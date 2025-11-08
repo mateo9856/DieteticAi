@@ -21,4 +21,6 @@ public class HumanDataDto
     
     [Required]
     public DietType DietType { get; set; }
+    
+    public decimal CaloricDemand { get; set; }
 }
