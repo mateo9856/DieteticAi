@@ -13,5 +13,14 @@ public class HumanDataDto
     public decimal ActualWeight { get; set; }
     
     [Required]
+    [Range(10.00, 300.00)]
+    public decimal ActualHeight { get; set; }
+    
+    [Required]
     public SexEnum Sex { get; set; }
+    
+    [Required]
+    public DietType DietType { get; set; }
+    
+    public decimal CaloricDemand { get; set; }
 }

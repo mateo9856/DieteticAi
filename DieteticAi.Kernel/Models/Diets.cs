@@ -12,7 +12,11 @@ public class Diets
     
     public decimal ForWeight { get; set; }
     
+    public decimal ForHeight { get; set; }
+    
     public decimal CaloricValue { get; set; }
     
     public SexEnum ForSex { get; set; }
+    
+    public DietType DietType { get; set; }
 }
