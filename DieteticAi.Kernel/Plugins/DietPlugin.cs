@@ -118,7 +118,7 @@ public class DietPlugin
         }
     }
 
-    protected virtual Diets UpdatePlanForPrompt(int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
+    protected virtual Diets UpdatePlanForPrompt(int id, int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
     {
         string promptBuilder = @"
         You are a diet planner.
@@ -134,7 +134,7 @@ public class DietPlugin
           ""ForSex"": ""..."",
           ""DietType"": ""...""
         }
-        Id must have a value equal to: " + (_diets.Count + 1) + @"
+        Id must have a value equal to: " + (id) + @"
         DietName should return updated diet topic name and Description should reflect the changes from previous to current values.
         Rest of fields should match current input values, only CaloricValue should return calculated daily caloric based on current values.
 
