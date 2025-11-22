@@ -1,0 +1,66 @@
+@page "/loadUser"
+@inject SessionManager SessionManager
+
+<PageTitle>Load User</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>👤 User Session</h1>
+                <p>Manage your user session and view your unique identifier</p>
+            </div>
+
+            <!-- User Info Section -->
+            <div class="dietetic-form">
+                @if (SessionManager.IsUserLoaded)
+                {
+                    <div class="alert alert-success" role="alert">
+                        <h4 class="alert-heading">✅ User Loaded Successfully!</h4>
+                        <p>Your user session has been initialized and is active.</p>
+                        <hr>
+                        <div class="user-info">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <strong>User ID:</strong>
+                                    <div class="user-id-display">
+                                        <code>@SessionManager.UserId</code>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <small class="text-muted">
+                                        <i>This unique identifier is stored in your session and will persist throughout your session.</i>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning" role="alert">
+                        <h4 class="alert-heading">⚠️ No User Loaded</h4>
+                        <p>User session is not initialized. Please wait while we load your user data...</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Load user data if not already loaded
+        if (!SessionManager.IsUserLoaded)
+        {
+            // Generate a unique ID (GUID)
+            var uniqueId = Guid.NewGuid().ToString();
+            SessionManager.SetUserId(uniqueId);
+        }
+    }
+}
+
