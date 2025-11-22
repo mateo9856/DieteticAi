@@ -1,5 +1,6 @@
 @page "/loadUser"
 @inject SessionManager SessionManager
+@inject NavigationManager Navigation
 
 <PageTitle>Load User</PageTitle>
 
@@ -47,6 +48,13 @@
                     </div>
                 }
             </div>
+
+            <!-- Clear Session Button -->
+            <div class="dietetic-form mt-3">
+                <button class="btn btn-danger w-100" @onclick="ClearSession" disabled="@(!SessionManager.IsUserLoaded)">
+                    <i class="bi bi-trash"></i> Clear Session
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -61,6 +69,12 @@
             var uniqueId = Guid.NewGuid().ToString();
             SessionManager.SetUserId(uniqueId);
         }
+    }
+
+    private void ClearSession()
+    {
+        SessionManager.ClearUserId();
+        Navigation.NavigateTo("/");
     }
 }
 
