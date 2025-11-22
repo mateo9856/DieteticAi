@@ -282,3 +282,28 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* User ID Display */
+.user-id-display {
+    margin-top: 10px;
+    padding: 15px;
+    background: var(--light-green);
+    border-radius: 10px;
+    border: 2px solid var(--accent-green);
+}
+
+.user-id-display code {
+    color: var(--dark-green);
+    font-size: 1.1rem;
+    font-weight: 600;
+    word-break: break-all;
+    display: block;
+    padding: 10px;
+    background: var(--white);
+    border-radius: 8px;
+    border: 1px solid var(--accent-green);
+}
+
+.user-info {
+    margin-top: 15px;
+}
