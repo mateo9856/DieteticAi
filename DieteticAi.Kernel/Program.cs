@@ -1,6 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using DietAI.Kernel.Models;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
 using Microsoft.SemanticKernel;

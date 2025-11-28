@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using DietAI.Kernel.Models;
 
 namespace DieteticAi.Models;
 
