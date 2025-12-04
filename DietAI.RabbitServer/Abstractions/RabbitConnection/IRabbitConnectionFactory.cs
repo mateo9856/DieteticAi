@@ -4,10 +4,11 @@ namespace DietAI.RabbitServer.Abstractions.RabbitConnection;
 
 public interface IRabbitConnectionFactory
 {
+    IConnection ActiveConnection { get; }
     Task<IConnection> PrepareConnectionAsync();
-    ConnectionFactory WithUserName(string userName);
-    ConnectionFactory WithPassword(string password);
-    ConnectionFactory WithHostName(string hostName);
-    ConnectionFactory WithVirtualHost(string virtualHost);
-    ConnectionFactory WithTls();
+    IRabbitConnectionFactory WithUserName(string userName);
+    IRabbitConnectionFactory WithPassword(string password);
+    IRabbitConnectionFactory WithHostName(string hostName);
+    IRabbitConnectionFactory WithVirtualHost(string virtualHost);
+    IRabbitConnectionFactory WithTls();
 }

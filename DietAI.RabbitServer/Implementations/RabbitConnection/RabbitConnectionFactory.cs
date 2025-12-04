@@ -3,35 +3,65 @@ using RabbitMQ.Client;
 
 namespace DietAI.RabbitServer.Implementations.RabbitConnection;
 
-public class RabbitConnectionFactory : IRabbitConnectionFactory
+public class RabbitConnectionFactory : IRabbitConnectionFactory, IAsyncDisposable
 {
+    private readonly ConnectionFactory _connectionFactory;
+
+    private const string HostNameRequiredMessage = "RabbitMQ Factory: HostName is required";
+
+    public IConnection ActiveConnection { get; private set; }
+    
+    public RabbitConnectionFactory()
+    {
+        _connectionFactory = new ConnectionFactory();
+    }
+    
     public async Task<IConnection> PrepareConnectionAsync()
     {
-        throw new NotImplementedException();
+        ActiveConnection = await _connectionFactory.CreateConnectionAsync();
+        return ActiveConnection;
     }
 
-    public ConnectionFactory WithUserName(string userName)
+    public IRabbitConnectionFactory WithUserName(string userName)
     {
-        throw new NotImplementedException();
+        _connectionFactory.UserName = userName;
+        return this;
     }
 
-    public ConnectionFactory WithPassword(string password)
+    public IRabbitConnectionFactory WithPassword(string password)
     {
-        throw new NotImplementedException();
+        _connectionFactory.Password = password;
+        return this;
     }
 
-    public ConnectionFactory WithHostName(string hostName)
+    public IRabbitConnectionFactory WithHostName(string hostName)
     {
-        throw new NotImplementedException();
+        _connectionFactory.HostName = hostName;
+        return this;
     }
 
-    public ConnectionFactory WithVirtualHost(string virtualHost)
+    public IRabbitConnectionFactory WithVirtualHost(string virtualHost)
     {
-        throw new NotImplementedException();
+        _connectionFactory.VirtualHost = virtualHost;
+        return this;
     }
 
-    public ConnectionFactory WithTls()
+    public IRabbitConnectionFactory WithTls()
     {
-        throw new NotImplementedException();
+        if (_connectionFactory?.HostName is null)
+            throw new InvalidOperationException(HostNameRequiredMessage);
+
+        _connectionFactory.Ssl = new SslOption
+        {
+            Enabled = true,
+            ServerName = _connectionFactory.HostName
+        };
+        return this;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await ActiveConnection.CloseAsync();
+        await ActiveConnection.DisposeAsync();
     }
 }
