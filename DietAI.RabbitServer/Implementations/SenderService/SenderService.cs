@@ -50,8 +50,4 @@ public class SenderService : ISenderService
         await _channel.BasicPublishAsync(exchange: exchangeName, routingKey: routingKey, body: Encoding.UTF8.GetBytes(jsonMessage), mandatory: persistent);
     }
 
-    public async Task PublishWithPropertiesAsync(string exchangeName, string routingKey, byte[] message, IBasicProperties properties)
-    {
-        throw new NotImplementedException();
-    }
 }

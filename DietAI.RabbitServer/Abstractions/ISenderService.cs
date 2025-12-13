@@ -15,6 +15,4 @@ public interface ISenderService
     Task PublishToExchangeAsync(string exchangeName, string routingKey, byte[] message, bool persistent = false);
 
     Task PublishToExchangeAsync<T>(string exchangeName, string routingKey, T message, bool persistent = false);
-
-    Task PublishWithPropertiesAsync(string exchangeName, string routingKey, byte[] message, IBasicProperties properties);
 }
