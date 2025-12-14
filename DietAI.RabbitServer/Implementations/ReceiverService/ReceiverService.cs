@@ -18,19 +18,15 @@ public class ReceiverService : IReceiveService
 
     public async Task<string> StartConsumingAsync(string queueName, Func<BasicDeliverEventArgs, Task> handler, bool autoAck = false)
     {
-        // Ensure queue exists before consuming (as requested)
         await _topicFactory.DeclareQueueAsync(queueName);
 
-        var channel = _topicFactory.ActiveChannel 
-            ?? throw new InvalidOperationException("No active channel available from ITopicFactory.");
-
+        var channel = EnsureChannelIsActive();
+        
         var eventingHandler = new AsyncEventingBasicConsumer(channel);
         eventingHandler.ReceivedAsync += async (model, ea) => await handler(ea);
 
-        // BasicConsumeAsync is expected to return the consumerTag
         var consumerTag = await channel.BasicConsumeAsync(queueName, autoAck: autoAck, consumer: eventingHandler);
 
-        // keep track so StopAll/StopConsuming can operate
         _consumers.TryAdd(consumerTag, queueName);
 
         return consumerTag;
@@ -38,20 +34,20 @@ public class ReceiverService : IReceiveService
 
     public async Task RejectAsync(ulong deliveryTag, bool requeue = false)
     {
-        var channel = _topicFactory.ActiveChannel ?? throw new InvalidOperationException("No active channel available from ITopicFactory.");
+        var channel = EnsureChannelIsActive();
         await channel.BasicRejectAsync(deliveryTag, requeue);
     }
 
     public async Task RejectMultipleAsync(ulong deliveryTag, bool requeue = false)
     {
-        var channel = _topicFactory.ActiveChannel ?? throw new InvalidOperationException("No active channel available from ITopicFactory.");
-        // use BasicNack with multiple = true to reject multiple
+        var channel = EnsureChannelIsActive();
+        
         await channel.BasicNackAsync(deliveryTag, multiple: true, requeue: requeue);
     }
 
     public async Task StopConsumingAsync(string consumerTag)
     {
-        var channel = _topicFactory.ActiveChannel ?? throw new InvalidOperationException("No active channel available from ITopicFactory.");
+        var channel = EnsureChannelIsActive();
         await channel.BasicCancelAsync(consumerTag);
 
         _consumers.TryRemove(consumerTag, out _);
@@ -59,9 +55,8 @@ public class ReceiverService : IReceiveService
 
     public async Task StopAllConsumersAsync()
     {
-        var channel = _topicFactory.ActiveChannel ?? throw new InvalidOperationException("No active channel available from ITopicFactory.");
-
-        // snapshot keys to avoid enumeration issues
+        var channel = EnsureChannelIsActive();
+        
         var tags = _consumers.Keys.ToArray();
         foreach (var tag in tags)
         {
@@ -72,7 +67,24 @@ public class ReceiverService : IReceiveService
 
     public async Task<BasicGetResult?> GetMessageAsync(string queueName, bool autoAck = true)
     {
-        var channel = _topicFactory.ActiveChannel ?? throw new InvalidOperationException("No active channel available from ITopicFactory.");
+        var channel = EnsureChannelIsActive();
         return await channel.BasicGetAsync(queueName, autoAck);
+    }
+
+    private IChannel EnsureChannelIsActive()
+    {   
+        var channel = _topicFactory.ActiveChannel;
+        
+        if (channel is null)
+        {
+            throw new InvalidOperationException("No active channel available from ITopicFactory.");
+        }
+
+        if (channel.IsClosed)
+        {
+            throw new InvalidOperationException("The channel is closed and cannot be used.");
+        }
+
+        return channel;
     }
 }
