@@ -4,20 +4,20 @@ using FluentAssertions;
 using Microsoft.SemanticKernel;
 using NSubstitute;
 
-namespace DietAI.Tests;
+namespace DietAI.Tests.RabbitServerTests;
 
 [TestFixture]
 public class DietPluginTests
 {
     private DietPlugin _dietPlugin = null!;
     private IList<Diets> _mockDiets = null!;
-    private Kernel _mockKernel = null!;
+    private Microsoft.SemanticKernel.Kernel _mockKernel = null!;
 
     [SetUp]
     public void Setup()
     {
         _mockDiets = Substitute.For<IList<Diets>>();
-        _mockKernel = Substitute.For<Kernel>();
+        _mockKernel = Substitute.For<Microsoft.SemanticKernel.Kernel>();
         _dietPlugin = new DietPlugin(_mockDiets, _mockKernel);
     }
 

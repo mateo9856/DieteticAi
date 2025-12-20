@@ -8,7 +8,7 @@ namespace DietAI.Tests;
 
 public class TestableDietPlugin : DietPlugin
 {
-    public TestableDietPlugin(IList<Diets> diets, Kernel kernel) : base(diets, kernel)
+    public TestableDietPlugin(IList<Diets> diets, Microsoft.SemanticKernel.Kernel kernel) : base(diets, kernel)
     {
     }
 
@@ -23,13 +23,13 @@ public class DietPluginUpdateTests
 {
     private TestableDietPlugin _dietPlugin = null!;
     private IList<Diets> _mockDiets = null!;
-    private Kernel _mockKernel = null!;
+    private Microsoft.SemanticKernel.Kernel _mockKernel = null!;
 
     [SetUp]
     public void Setup()
     {
         _mockDiets = Substitute.For<IList<Diets>>();
-        _mockKernel = Substitute.For<Kernel>();
+        _mockKernel = Substitute.For<Microsoft.SemanticKernel.Kernel>();
         _dietPlugin = new TestableDietPlugin(_mockDiets, _mockKernel);
     }
 
