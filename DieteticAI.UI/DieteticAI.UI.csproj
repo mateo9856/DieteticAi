@@ -1,22 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../DietAI.RabbitServer/DietAI.RabbitServer.csproj" />
         <ProjectReference Include="..\DieteticAi.Kernel\DietAI.Kernel.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="obj\Debug\net8.0\" />
+      <Folder Include="obj\Debug\net10.0\" />
     </ItemGroup>
 
 </Project>
