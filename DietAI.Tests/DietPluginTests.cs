@@ -1,8 +1,10 @@
 using DieteticAi.Models;
 using DieteticAi.Plugins;
+using DieteticAi.Tools.Wrappers;
 using FluentAssertions;
 using Microsoft.SemanticKernel;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 
 namespace DietAI.Tests.RabbitServerTests;
 
@@ -11,13 +13,13 @@ public class DietPluginTests
 {
     private DietPlugin _dietPlugin = null!;
     private IList<Diets> _mockDiets = null!;
-    private Microsoft.SemanticKernel.Kernel _mockKernel = null!;
+    private IKernelWrapper _mockKernel = null!;
 
     [SetUp]
     public void Setup()
     {
         _mockDiets = Substitute.For<IList<Diets>>();
-        _mockKernel = Substitute.For<Microsoft.SemanticKernel.Kernel>();
+        _mockKernel = Substitute.For<IKernelWrapper>();
         _dietPlugin = new DietPlugin(_mockDiets, _mockKernel);
     }
 
@@ -52,7 +54,7 @@ public class DietPluginTests
     {
         // Arrange - no match found
         _mockDiets.FirstOrDefault(Arg.Any<Func<Diets, bool>>())
-            .Returns((Diets)null!);
+            .ReturnsNull();
 
         // Mock the kernel function creation and invocation
         var mockFunction = Substitute.For<KernelFunction>();
@@ -131,7 +133,7 @@ public class DietPluginTests
     {
         // Arrange - no match found
         _mockDiets.FirstOrDefault(Arg.Any<Func<Diets, bool>>())
-            .Returns((Diets)null!);
+            .ReturnsNull();
 
         // Mock the kernel function creation and invocation to return empty response
         var mockFunction = Substitute.For<KernelFunction>();
@@ -157,7 +159,7 @@ public class DietPluginTests
     {
         // Arrange - no match found
         _mockDiets.FirstOrDefault(Arg.Any<Func<Diets, bool>>())
-            .Returns((Diets)null!);
+            .ReturnsNull();
 
         // Mock the kernel function creation and invocation to return invalid JSON
         var mockFunction = Substitute.For<KernelFunction>();

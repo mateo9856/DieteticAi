@@ -2,6 +2,7 @@ using DietAI.Kernel.Models;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
 using DieteticAi.Tools;
+using DieteticAi.Tools.Wrappers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 
@@ -19,7 +20,7 @@ class Program
         var aiConfig = new AiModelSelector(configuration);
         var kernel = aiConfig.BuildKernel();
         
-        var dietPlugin = new DietPlugin(new List<Diets>(), kernel);
+        var dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));
         kernel.Plugins.AddFromObject(dietPlugin, "DietPlugin");
         
         Console.WriteLine("Enter your data, first age, next weight, sex(type Male, Female or Unbinary)");
