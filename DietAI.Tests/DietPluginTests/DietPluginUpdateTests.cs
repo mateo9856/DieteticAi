@@ -4,8 +4,9 @@ using DieteticAi.Tools.Wrappers;
 using FluentAssertions;
 using Microsoft.SemanticKernel;
 using NSubstitute;
+using static DietAI.Tests.DietPluginTests.DietPluginSeeds;
 
-namespace DietAI.Tests;
+namespace DietAI.Tests.DietPluginTests;
 
 public class TestableDietPlugin : DietPlugin
 {
@@ -23,13 +24,13 @@ public class TestableDietPlugin : DietPlugin
 public class DietPluginUpdateTests
 {
     private TestableDietPlugin _dietPlugin = null!;
-    private IList<Diets> _mockDiets = null!;
+    private List<Diets> _mockDiets = null!;
     private IKernelWrapper _mockKernel = null!;
 
     [SetUp]
     public void Setup()
     {
-        _mockDiets = Substitute.For<IList<Diets>>();
+        _mockDiets = LoadDietData();
         _mockKernel = Substitute.For<IKernelWrapper>();
         _dietPlugin = new TestableDietPlugin(_mockDiets, _mockKernel);
     }

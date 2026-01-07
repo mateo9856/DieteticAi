@@ -70,7 +70,7 @@ public class ReceiveServiceTests
 
         var res = await _receiver.GetMessageAsync(queue, autoAck: false);
 
-            Assert.That(res, Is.Null);
+        Assert.That(res, Is.Null);
     }
 
     [Test]

@@ -77,7 +77,7 @@ public class DietPlugin
             ";
             kernelArguments["caloricDemand"] = caloric.ToString();
         }
-        var functionResult = _kernelWrapper.CreateFunctionFromPrompt(promptBuilder).InvokeAsync(kernelArguments);
+        var functionResult = _kernelWrapper.InvokePromptAsync(promptBuilder, kernelArguments);
 
         var returnedPlan = functionResult.ToString();
         if (string.IsNullOrWhiteSpace(returnedPlan))
@@ -114,7 +114,7 @@ public class DietPlugin
             ["previousCaloricDemand"] = previousCaloricDemand.ToString()
         };
 
-        var functionResult = _kernelWrapper.CreateFunctionFromPrompt(promptBuilder).InvokeAsync(kernelArguments);
+        var functionResult = _kernelWrapper.InvokePromptAsync(promptBuilder, kernelArguments);
 
         var returnedPlan = functionResult.ToString();
         if (string.IsNullOrWhiteSpace(returnedPlan))
