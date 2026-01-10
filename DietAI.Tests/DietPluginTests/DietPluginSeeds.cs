@@ -13,8 +13,10 @@ public static class DietPluginSeeds
             Description = "Existing plan",
             Age = 30,
             ForWeight = 80m,
+            ForHeight = 183m,
             CaloricValue = 2400m,
-            ForSex = SexEnum.Male
+            ForSex = SexEnum.Male,
+            DietType = DietType.Keto
         },
     };
 }

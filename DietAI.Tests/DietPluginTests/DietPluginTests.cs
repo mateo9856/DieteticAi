@@ -37,8 +37,11 @@ public class DietPluginTests
     [Test]
     public void GetPlanFromListOrPrompt_GeneratesNewPlan_WhenNoMatchFound()
     {
+        // Arrange
         var mockData = _mockDiets.Find(d => d.Id == 1);
+        mockData.Description = "New generated plan";
         var parsedData = JsonConvert.SerializeObject(mockData);
+        
         // Mock the kernel function creation and invocation
         _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
             .Returns(ValueTask.FromResult<object?>(parsedData));
@@ -47,7 +50,7 @@ public class DietPluginTests
         var result = _dietPlugin.GetPlanFromListOrPrompt(25, 70m, 170m, 2500, SexEnum.Female, DietType.HighProtein);
 
         // Assert
-        result.Should().Be(parsedData);
+        result.Should().Be(mockData.Description);
     }
 
     [Test]
@@ -64,7 +67,7 @@ public class DietPluginTests
     public void GetPlanFromListOrPrompt_ReturnsExistingPlan_WhenWeightIsWithinRange()
     {
         // Act - weight 85 should match weight 80 (within 5kg range)
-        var result = _dietPlugin.GetPlanFromListOrPrompt(30, 85m, 181, 0, SexEnum.Male, DietType.GlutenFree);
+        var result = _dietPlugin.GetPlanFromListOrPrompt(30, 85m, 181, 0, SexEnum.Male, DietType.Keto);
 
         // Assert
         result.Should().Be("Existing plan");
