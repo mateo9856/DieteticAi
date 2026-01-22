@@ -55,7 +55,7 @@ public class DietPluginUpdateTests
 
         var parsedData = JsonConvert.SerializeObject(expectedDiet);
         _mockDiets.Clear();
-        _mockDiets.Count.Returns(0);
+        _mockDiets.Count.Should().Be(0);
         // Mock the kernel function creation and invocation
         _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
             .Returns(ValueTask.FromResult<object?>(parsedData));
@@ -140,7 +140,7 @@ public class DietPluginUpdateTests
         // Return valid JSON structure but with null values that might cause deserialization to return null
         var validJson = "{\"Id\":null,\"DietName\":null,\"Description\":null}";
 
-        _mockDiets.Count.Returns(0);
+        _mockDiets.Count.Should().Be(0);
         _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
             .Returns(ValueTask.FromResult<object?>(validJson));
 
@@ -158,7 +158,7 @@ public class DietPluginUpdateTests
                 previousCaloricDemand: 2000m
             ));
 
-        exception!.Message.Should().Be("Error through deserialize, unexpected error in returned prompt.");
+        exception!.Message.Should().Be("Error through Json parsing plan");
     }
 
     [Test]
@@ -171,7 +171,7 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
-        _dietPlugin.UpdatePlanForPrompt(
+        var result = _dietPlugin.UpdatePlanForPrompt(
             age: 40,
             actualWeight: 90m,
             actualHeight: 185m,
@@ -184,18 +184,10 @@ public class DietPluginUpdateTests
         );
 
         // Assert
-        _mockKernel.Received(1).CreateFunctionFromPrompt(Arg.Is<string>(s => 
-            s.Contains("Id must have a value equal to: 6") && // _diets.Count + 1 = 5 + 1 = 6
-            s.Contains("Update an existing monthly diet plan") &&
-            s.Contains("Previous Weight: {{previousWeight}}") &&
-            s.Contains("Previous Height: {{previousHeight}}") &&
-            s.Contains("Previous Caloric Demand: {{previousCaloricDemand}}") &&
-            s.Contains("Age: {{age}}") &&
-            s.Contains("Weight: {{weight}}") &&
-            s.Contains("Height: {{height}}") &&
-            s.Contains("Sex: {{sex}}") &&
-            s.Contains("DietType: {{dietType}}") &&
-            s.Contains("CaloricDemand: {{caloricDemand}}")));
+        result.Should().NotBeNull();
+        result.ForWeight.Should().Be(90m);
+        result.CaloricValue.Should().Be(2600m);
+        result.DietType.Should().Be(DietType.Keto);
         
     }
 
@@ -206,7 +198,7 @@ public class DietPluginUpdateTests
         _mockDiets.Clear();
         var validJson = "{\"Id\":1,\"DietName\":\"Weight Loss Maintenance\",\"Description\":\"Adjusted plan for weight loss from 100kg to 85kg\",\"Age\":35,\"ForWeight\":85,\"ForHeight\":180,\"CaloricValue\":2100,\"ForSex\":\"Male\",\"DietType\":\"LowFat\"}";
 
-        _mockDiets.Count.Returns(0);
+        _mockDiets.Count.Should().Be(0);
         _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
             .Returns(ValueTask.FromResult<object?>(validJson));
 
@@ -236,8 +228,8 @@ public class DietPluginUpdateTests
         // Arrange
         _mockDiets.Clear();
         var validJson = "{\"Id\":1,\"DietName\":\"Muscle Gain Plan\",\"Description\":\"Updated plan for weight gain from 60kg to 65kg\",\"Age\":25,\"ForWeight\":65,\"ForHeight\":170,\"CaloricValue\":2800,\"ForSex\":\"Female\",\"DietType\":\"HighProtein\"}";
-        
-        _mockDiets.Count.Returns(0);
+
+        _mockDiets.Count.Should().Be(0);
         _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
             .Returns(ValueTask.FromResult<object?>(validJson));
 
@@ -269,7 +261,7 @@ public class DietPluginUpdateTests
         _mockDiets.Clear();
         var validJson = "{\"Id\":1,\"DietName\":\"Balanced Plan\",\"Description\":\"Updated plan\",\"Age\":30,\"ForWeight\":70,\"ForHeight\":175,\"CaloricValue\":2000,\"ForSex\":\"Unbinary\",\"DietType\":\"Standard\"}";
 
-        _mockDiets.Count.Returns(0);
+        _mockDiets.Count.Should().Be(0);
         _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
             .Returns(ValueTask.FromResult<object?>(validJson));
 

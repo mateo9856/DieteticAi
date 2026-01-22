@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DieteticAi.Constaints;
 using DieteticAi.Models;
 using DieteticAi.Tools.Wrappers;
@@ -88,7 +89,12 @@ public class DietPlugin
         try
         {
             JsonDocument.Parse(returnedPlan);
-            return JsonSerializer.Deserialize<Diets>(returnedPlan) 
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() },
+                PropertyNameCaseInsensitive = true
+            };
+            return JsonSerializer.Deserialize<Diets>(returnedPlan, jsonOptions) 
                    ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
         }
         catch
@@ -125,7 +131,12 @@ public class DietPlugin
         try
         {
             JsonDocument.Parse(returnedPlan);
-            return JsonSerializer.Deserialize<Diets>(returnedPlan) 
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() },
+                PropertyNameCaseInsensitive = true
+            };
+            return JsonSerializer.Deserialize<Diets>(returnedPlan, jsonOptions) 
                    ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
         }
         catch
