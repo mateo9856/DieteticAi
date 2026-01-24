@@ -3,7 +3,8 @@
 @using DieteticAI.UI.Services.AiPlanSender
 @using DieteticAI.UI.Services.AiPlanSender.Abstractions
 @using DieteticAI.UI.Services.AiPlanSender.Models
-@inject IAiPlanSender
+@using DieteticAI.UI.Tools
+@inject IAiPlanSender AiPlanSenderService
 
 <PageTitle>Diet Plan Generator</PageTitle>
 
@@ -33,6 +34,12 @@
                             <InputNumber @bind-Value="planRequest.ActualWeight" class="form-control" id="weight" placeholder="Enter your weight" step="0.1" />
                             <ValidationMessage For="@(() => planRequest.ActualWeight)" class="text-danger" />
                         </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="height" class="form-label">Current Height (cm)</label>
+                            <InputNumber @bind-Value="planRequest.ActualHeight" class="form-control" id="weight" placeholder="Enter your weight" step="0.1" />
+                            <ValidationMessage For="@(() => planRequest.ActualHeight)" class="text-danger" />
+                        </div>
                     </div>
                     
                     <div class="mb-4">
@@ -44,6 +51,22 @@
                             <option value="@SexEnum.Unbinary">Non-binary</option>
                         </InputSelect>
                         <ValidationMessage For="@(() => planRequest.Sex)" class="text-danger" />
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="dietType" class="form-label">
+                            <InputSelect @bind-Value="planRequest.DietType" class="form-select" id="sex">
+                                <option value="">Select your gender</option>
+                                <option value="@DietType.Standard">Standard</option>
+                                <option value="@DietType.Vegan">Vegan</option>
+                                <option value="@DietType.Vegetarian">Vegetarian</option>
+                                <option value="@DietType.Keto">Keto</option>
+                                <option value="@DietType.LowFat">Low fat</option>
+                                <option value="@DietType.GlutenFree">Gluten free</option>
+                                <option value="@DietType.HighProtein">High protein</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => planRequest.Sex)" class="text-danger" />
+                        </label>
                     </div>
                     
                     <div class="text-center">
@@ -118,11 +141,9 @@
         
         try
         {
-            // Simulate API call delay
-            await Task.Delay(2000);
-
-            planRequest.CaloricDemand = CalculateCalories(planRequest.Age, planRequest.ActualWeight, planRequest.Sex);
-            //TODO: prepare sendService
+            var dietExtensions = new DietsExtensions();
+            planRequest.CaloricDemand = dietExtensions.CalculateCalories(planRequest.Age, planRequest.ActualWeight, planRequest.Sex);
+            var dietReq = await AiPlanSenderService.SendPlanRequestAsync(planRequest);
             showResults = true;
         }
         catch (Exception ex)
@@ -136,20 +157,5 @@
         }
     }
     
-    private decimal CalculateCalories(int age, decimal weight, SexEnum sex)
-    {
-        // Simple calorie calculation based on BMR
-        decimal bmr;
-        if (sex == SexEnum.Male)
-        {
-            bmr = 88.362m + (13.397m * weight) + (4.799m * age) - (5.677m * age);
-        }
-        else
-        {
-            bmr = 447.593m + (9.247m * weight) + (3.098m * age) - (4.330m * age);
-        }
-        
-        // Add activity factor (1.2 for sedentary)
-        return Math.Round(bmr * 1.2m, 0);
-    }
+
 }

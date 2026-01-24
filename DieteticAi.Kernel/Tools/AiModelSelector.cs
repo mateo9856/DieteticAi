@@ -5,13 +5,14 @@ namespace DieteticAi.Tools;
 
 public class AiModelSelector
 {
-    private const string _defaultAi = "Ollama";
-
+    private const string OllamaAI = "Ollama";
+    private const string GeminiAI = "Gemini";
+    
     private string SelectedAi;
     
-    private readonly IConfiguration _configuration;
+    private readonly KernelConfiguration _configuration;
 
-    public AiModelSelector(IConfiguration configuration)
+    public AiModelSelector(KernelConfiguration configuration)
     {
         _configuration = configuration;
     }
@@ -24,14 +25,14 @@ public class AiModelSelector
         
         var kernel = Kernel.CreateBuilder();
 
-        if (SelectedAi == "Gemini")
+        if (SelectedAi == GeminiAI)
         {
             return kernel.AddGoogleAIGeminiChatCompletion(
                     modelId: llmConfig.llmModel, llmConfig.host)
                 .Build();
         }
 
-        if (SelectedAi == "Ollama")
+        if (SelectedAi == OllamaAI)
         {
             return kernel.AddOllamaChatCompletion(
                 modelId: llmConfig.llmModel,
@@ -44,16 +45,15 @@ public class AiModelSelector
 
     private (string? host, string? llmModel) GetSelectedAiModel()
     {
-        SelectedAi = _configuration["SelectedModelType"] 
-                         ?? _defaultAi;
+        SelectedAi = _configuration.SelectedModelType
+                         ?? OllamaAI;
 
-        if (SelectedAi == "Gemini")
-            return (_configuration["Gemini:ApiKey"], _configuration["Gemini:LlmModel"]);
-
-        if (SelectedAi == "Ollama")
-            return (_configuration["Ollama:Connection"], _configuration["Ollama:LlmModel"]);
-        
-        throw new ArgumentNullException("Incorrect select model, check application settings!");
+        return SelectedAi switch
+        {
+            GeminiAI => (_configuration.Gemini.ApiKey, _configuration.Gemini.LlmModel),
+            OllamaAI => (_configuration.Ollama.Connection, _configuration.Ollama.LlmModel),
+            _ => throw new ArgumentNullException("Incorrect select model, check application settings!")
+        };
     }
 
 }

@@ -17,7 +17,16 @@ class Program
             .AddJsonFile("appsettings.json", false, true)
             .Build();
 
-        var aiConfig = new AiModelSelector(configuration);
+        var kernelConfig = new KernelConfiguration();
+        configuration.Bind(kernelConfig);
+
+        if (!kernelConfig.TestMode)
+        {
+            //TODO: prepare concurrent process to consume DietPlans
+            return;
+        }
+        
+        var aiConfig = new AiModelSelector(kernelConfig);
         var kernel = aiConfig.BuildKernel();
         
         var dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));

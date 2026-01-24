@@ -1,4 +1,4 @@
-namespace DieteticAI.UI.Services;
+namespace DieteticAI.UI.Tools;
 
 public class SessionManager
 {

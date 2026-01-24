@@ -1,7 +1,7 @@
 using DietAI.RabbitServer.Abstractions.RabbitConnection;
 using RabbitMQ.Client;
 
-namespace DieteticAI.UI.Services;
+namespace DieteticAI.UI.Tools;
 
 public class TopicManager
 {
