@@ -21,7 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DieteticAi.Kernel/DietAI.Kernel.csproj" />
+        <ProjectReference Include="..\DieteticAi.Kernel\DietAI.AiKernel.csproj" />
         <ProjectReference Include="../DietAI.RabbitServer/DietAI.RabbitServer.csproj" />
     </ItemGroup>
 

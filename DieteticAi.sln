@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DietAI.Kernel", "DieteticAi.Kernel\DietAI.Kernel.csproj", "{2B3FA714-88FB-4C33-B817-B84FCB5321E4}"
+#
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DietAI.AiKernel", "DieteticAi.Kernel\DietAI.AiKernel.csproj", "{2B3FA714-88FB-4C33-B817-B84FCB5321E4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DietAI.Tests", "DietAI.Tests\DietAI.Tests.csproj", "{8BFDAA4C-CB90-44B1-86ED-DF63CCB46B74}"
 EndProject

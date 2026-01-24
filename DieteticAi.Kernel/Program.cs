@@ -1,10 +1,13 @@
-using DietAI.Kernel.Models;
-using DieteticAi.Models;
-using DieteticAi.Plugins;
+using DietAi.AiKernel;
+using DietAI.AiKernel;
+using DietAI.RabbitServer.Abstractions;
+using DietAI.RabbitServer.Implementations.ReceiverService;
+using DietAI.RabbitServer.Implementations.SenderService;
 using DieteticAi.Tools;
-using DieteticAi.Tools.Wrappers;
 using Microsoft.Extensions.Configuration;
-using Microsoft.SemanticKernel;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace DieteticAi;
 
@@ -19,42 +22,27 @@ class Program
 
         var kernelConfig = new KernelConfiguration();
         configuration.Bind(kernelConfig);
-
-        if (!kernelConfig.TestMode)
-        {
-            //TODO: prepare concurrent process to consume DietPlans
-            return;
-        }
         
         var aiConfig = new AiModelSelector(kernelConfig);
         var kernel = aiConfig.BuildKernel();
         
-        var dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));
-        kernel.Plugins.AddFromObject(dietPlugin, "DietPlugin");
-        
-        Console.WriteLine("Enter your data, first age, next weight, sex(type Male, Female or Unbinary)");
-        Console.WriteLine("Then type DietType, your height and caloric demand");
-        
-        var age = int.Parse(Console.ReadLine() ?? "0");
-        var weight = decimal.Parse(Console.ReadLine() ?? "0");
-        var sex = Enum.Parse<SexEnum>(Console.ReadLine() ?? "Unbinary");
-        var dietType = Enum.Parse<DietType>(Console.ReadLine() ?? "Standard");
-        var height = decimal.Parse(Console.ReadLine() ?? "0");
-        var caloricDemand = decimal.Parse(Console.ReadLine() ?? "0");
-        
-        var dto = new HumanDataDto
+        if (kernelConfig.TestMode)
         {
-            Age = age,
-            ActualWeight = weight,
-            ActualHeight = height,
-            Sex = sex,
-            CaloricDemand = caloricDemand,
-            DietType = dietType,
-        };
+            await new DietSimulator(kernel).Run();
+            return;
+        }
 
-        var plan = dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.ActualHeight, dto.CaloricDemand, dto.Sex, dto.DietType);
+        ServiceCollection services = new();
+        services.AddTransient<IReceiveService, ReceiverService>();
+        services.AddTransient<ISenderService, SenderService>();
+        services.AddSingleton<DietConcurrentRunner>();
+        services.AddLogging(builder =>
+        {
+            builder.AddEventSourceLogger();
+        });
         
-        Console.WriteLine($"Generated plan: \n{plan}");
-
+        var serviceProvider = services.BuildServiceProvider();
+        await serviceProvider.GetRequiredService<DietConcurrentRunner>().Run();
+        
     }    
 }
