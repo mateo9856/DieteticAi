@@ -2,24 +2,13 @@ namespace DieteticAI.UI.Services;
 
 public class SessionManager
 {
-    private string? _userId;
-
     public string? UserId
     {
-        get => _userId;
-        set => _userId = value;
+        get;
+        set => field = value;
     }
 
-    public bool IsUserLoaded => !string.IsNullOrEmpty(_userId);
-
-    public void SetUserId(string userId)
-    {
-        _userId = userId;
-    }
-
-    public void ClearUserId()
-    {
-        _userId = null;
-    }
+    public bool? IsActiveRabbitConnection { get; set; }
+    
+    public bool IsUserLoaded => !string.IsNullOrEmpty(UserId);
 }
-

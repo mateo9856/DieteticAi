@@ -1,14 +1,17 @@
 using DieteticAi.Models;
 using DieteticAi.Plugins;
+using DieteticAi.Tools.Wrappers;
 using FluentAssertions;
 using Microsoft.SemanticKernel;
+using Newtonsoft.Json;
 using NSubstitute;
+using static DietAI.Tests.DietPluginTests.DietPluginSeeds;
 
-namespace DietAI.Tests;
+namespace DietAI.Tests.DietPluginTests;
 
 public class TestableDietPlugin : DietPlugin
 {
-    public TestableDietPlugin(IList<Diets> diets, Kernel kernel) : base(diets, kernel)
+    public TestableDietPlugin(IList<Diets> diets, IKernelWrapper kernel) : base(diets, kernel)
     {
     }
 
@@ -22,14 +25,14 @@ public class TestableDietPlugin : DietPlugin
 public class DietPluginUpdateTests
 {
     private TestableDietPlugin _dietPlugin = null!;
-    private IList<Diets> _mockDiets = null!;
-    private Kernel _mockKernel = null!;
+    private List<Diets> _mockDiets = null!;
+    private IKernelWrapper _mockKernel = null!;
 
     [SetUp]
     public void Setup()
     {
-        _mockDiets = Substitute.For<IList<Diets>>();
-        _mockKernel = Substitute.For<Kernel>();
+        _mockDiets = LoadDietData();
+        _mockKernel = Substitute.For<IKernelWrapper>();
         _dietPlugin = new TestableDietPlugin(_mockDiets, _mockKernel);
     }
 
@@ -50,17 +53,12 @@ public class DietPluginUpdateTests
             DietType = DietType.Keto
         };
 
-        var validJson = "{\"Id\":1,\"DietName\":\"Updated Weight Loss Plan\",\"Description\":\"Updated plan based on weight change from 80kg to 75kg\",\"Age\":30,\"ForWeight\":75,\"ForHeight\":175,\"CaloricValue\":2200,\"ForSex\":\"Male\",\"DietType\":\"Keto\"}";
-
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
-        mockResult.ToString().Returns(validJson);
-
+        var parsedData = JsonConvert.SerializeObject(expectedDiet);
+        _mockDiets.Clear();
         _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        // Mock the kernel function creation and invocation
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(parsedData));
 
         // Act
         var result = _dietPlugin.UpdatePlanForPrompt(
@@ -85,22 +83,13 @@ public class DietPluginUpdateTests
         result.CaloricValue.Should().Be(2200m);
         result.ForSex.Should().Be(SexEnum.Male);
         result.DietType.Should().Be(DietType.Keto);
-        _mockKernel.Received(1).CreateFunctionFromPrompt(Arg.Any<string>());
     }
 
     [Test]
     public void UpdatePlanForPrompt_ThrowsException_WhenKernelReturnsEmptyResponse()
     {
-        // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
-        mockResult.ToString().Returns(string.Empty);
-
-        _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(string.Empty));
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() =>
@@ -117,22 +106,14 @@ public class DietPluginUpdateTests
             ));
 
         exception!.Message.Should().Be("Model returned empty response");
-        _mockKernel.Received(1).CreateFunctionFromPrompt(Arg.Any<string>());
     }
 
     [Test]
     public void UpdatePlanForPrompt_ThrowsException_WhenKernelReturnsInvalidJson()
     {
         // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
-        mockResult.ToString().Returns("invalid json response");
-
-        _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>("Invalid json response"));
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() =>
@@ -149,23 +130,19 @@ public class DietPluginUpdateTests
             ));
 
         exception!.Message.Should().Be("Error through Json parsing plan");
-        _mockKernel.Received(1).CreateFunctionFromPrompt(Arg.Any<string>());
     }
 
     [Test]
     public void UpdatePlanForPrompt_ThrowsException_WhenDeserializationReturnsNull()
     {
         // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
+        _mockDiets.Clear();
         // Return valid JSON structure but with null values that might cause deserialization to return null
-        mockResult.ToString().Returns("{\"Id\":null,\"DietName\":null,\"Description\":null}");
+        var validJson = "{\"Id\":null,\"DietName\":null,\"Description\":null}";
 
         _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act & Assert
         var exception = Assert.Throws<Exception>(() =>
@@ -182,23 +159,16 @@ public class DietPluginUpdateTests
             ));
 
         exception!.Message.Should().Be("Error through deserialize, unexpected error in returned prompt.");
-        _mockKernel.Received(1).CreateFunctionFromPrompt(Arg.Any<string>());
     }
 
     [Test]
     public void UpdatePlanForPrompt_PassesCorrectParametersToKernel()
     {
         // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
         var validJson = "{\"Id\":1,\"DietName\":\"Updated Plan\",\"Description\":\"Test\",\"Age\":40,\"ForWeight\":90,\"ForHeight\":185,\"CaloricValue\":2600,\"ForSex\":\"Male\",\"DietType\":\"Keto\"}";
-        mockResult.ToString().Returns(validJson);
-
-        _mockDiets.Count.Returns(5);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
         _dietPlugin.UpdatePlanForPrompt(
@@ -226,24 +196,19 @@ public class DietPluginUpdateTests
             s.Contains("Sex: {{sex}}") &&
             s.Contains("DietType: {{dietType}}") &&
             s.Contains("CaloricDemand: {{caloricDemand}}")));
-
-        mockFunction.Received(1).InvokeAsync(Arg.Any<KernelArguments>());
+        
     }
 
     [Test]
     public void UpdatePlanForPrompt_HandlesWeightLossScenario()
     {
         // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
+        _mockDiets.Clear();
         var validJson = "{\"Id\":1,\"DietName\":\"Weight Loss Maintenance\",\"Description\":\"Adjusted plan for weight loss from 100kg to 85kg\",\"Age\":35,\"ForWeight\":85,\"ForHeight\":180,\"CaloricValue\":2100,\"ForSex\":\"Male\",\"DietType\":\"LowFat\"}";
-        mockResult.ToString().Returns(validJson);
 
         _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
         var result = _dietPlugin.UpdatePlanForPrompt(
@@ -269,16 +234,12 @@ public class DietPluginUpdateTests
     public void UpdatePlanForPrompt_HandlesWeightGainScenario()
     {
         // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
+        _mockDiets.Clear();
         var validJson = "{\"Id\":1,\"DietName\":\"Muscle Gain Plan\",\"Description\":\"Updated plan for weight gain from 60kg to 65kg\",\"Age\":25,\"ForWeight\":65,\"ForHeight\":170,\"CaloricValue\":2800,\"ForSex\":\"Female\",\"DietType\":\"HighProtein\"}";
-        mockResult.ToString().Returns(validJson);
-
+        
         _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
         var result = _dietPlugin.UpdatePlanForPrompt(
@@ -304,17 +265,13 @@ public class DietPluginUpdateTests
     [Test]
     public void UpdatePlanForPrompt_HandlesDifferentSexTypes()
     {
-        // Arrange
-        var mockFunction = Substitute.For<KernelFunction>();
-        var mockResult = Substitute.For<FunctionResult>();
+        // Arrange        
+        _mockDiets.Clear();
         var validJson = "{\"Id\":1,\"DietName\":\"Balanced Plan\",\"Description\":\"Updated plan\",\"Age\":30,\"ForWeight\":70,\"ForHeight\":175,\"CaloricValue\":2000,\"ForSex\":\"Unbinary\",\"DietType\":\"Standard\"}";
-        mockResult.ToString().Returns(validJson);
 
         _mockDiets.Count.Returns(0);
-        _mockKernel.CreateFunctionFromPrompt(Arg.Any<string>())
-            .Returns(mockFunction);
-        mockFunction.InvokeAsync(Arg.Any<KernelArguments>())
-            .Returns(mockResult);
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Any<KernelArguments>())
+            .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
         var result = _dietPlugin.UpdatePlanForPrompt(

@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Text.Json;
+using DieteticAi.Constaints;
 using DieteticAi.Models;
+using DieteticAi.Tools.Wrappers;
 using Microsoft.SemanticKernel;
 
 namespace DieteticAi.Plugins;
@@ -8,12 +10,12 @@ namespace DieteticAi.Plugins;
 public class DietPlugin
 {
     private readonly IList<Diets> _diets;
-    private readonly Kernel _kernel;
+    private readonly IKernelWrapper _kernelWrapper;
 
-    public DietPlugin(IList<Diets> diets, Kernel kernel)
+    public DietPlugin(IList<Diets> diets, IKernelWrapper kernel)
     {
         _diets = diets;
-        _kernel = kernel;
+        _kernelWrapper = kernel;
     }
     
     [KernelFunction("get_diet_or_generate")]
@@ -59,30 +61,7 @@ public class DietPlugin
 
     protected virtual Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, decimal currentHeight, SexEnum sex, DietType dietType, decimal? caloric)
     {
-        string promptBuilder = @"
-        You are a diet planner.
-        Generate a monthly diet plan in **JSON format** like this:
-        {
-          ""Id"": ""..."",
-          ""DietName"": ""..."",
-          ""Description"": ""..."",
-          ""Age"": ""..."",
-          ""ForWeight"": ""..."",
-          ""CaloricValue"": ""..."",
-          ""ForSex"": ""..."",
-
-        }
-        Id must have a value eqaul to: " + (_diets.Count + 1) + @"
-        DietName should return basically diet topic name and Description summary plan with calculated value.
-        Rest of fields similar to input, only CaloricValue should return calculated daily caloric.
-
-        Constraints:
-        - Age: {{age}}
-        - Weight: {{weight}} kg
-        - Height: {{height}} cm
-        - Sex: {{sex}}
-        - DietType: {{dietType}}
-        ";
+        string promptBuilder = DietPrompts.CreatePlanPrompt(_diets.Count + 1);
         var kernelArguments = new KernelArguments
         {
             ["age"] = age,
@@ -98,7 +77,7 @@ public class DietPlugin
             ";
             kernelArguments["caloricDemand"] = caloric.ToString();
         }
-        var functionResult = _kernel.CreateFunctionFromPrompt(promptBuilder).InvokeAsync(kernelArguments);
+        var functionResult = _kernelWrapper.InvokePromptAsync(promptBuilder, kernelArguments);
 
         var returnedPlan = functionResult.ToString();
         if (string.IsNullOrWhiteSpace(returnedPlan))
@@ -120,37 +99,7 @@ public class DietPlugin
 
     protected virtual Diets UpdatePlanForPrompt(int id, int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
     {
-        string promptBuilder = @"
-        You are a diet planner.
-        Update an existing monthly diet plan in **JSON format** like this:
-        {
-          ""Id"": ""..."",
-          ""DietName"": ""..."",
-          ""Description"": ""..."",
-          ""Age"": ""..."",
-          ""ForWeight"": ""..."",
-          ""ForHeight"": ""..."",
-          ""CaloricValue"": ""..."",
-          ""ForSex"": ""..."",
-          ""DietType"": ""...""
-        }
-        Id must have a value equal to: " + (id) + @"
-        DietName should return updated diet topic name and Description should reflect the changes from previous to current values.
-        Rest of fields should match current input values, only CaloricValue should return calculated daily caloric based on current values.
-
-        Previous values:
-        - Previous Weight: {{previousWeight}} kg
-        - Previous Height: {{previousHeight}} cm
-        - Previous Caloric Demand: {{previousCaloricDemand}} kcal
-
-        Current values:
-        - Age: {{age}}
-        - Weight: {{weight}} kg
-        - Height: {{height}} cm
-        - Sex: {{sex}}
-        - DietType: {{dietType}}
-        - CaloricDemand: {{caloricDemand}} kcal
-        ";
+        string promptBuilder = DietPrompts.UpdatePlanPrompt(id);
 
         var kernelArguments = new KernelArguments
         {
@@ -165,7 +114,7 @@ public class DietPlugin
             ["previousCaloricDemand"] = previousCaloricDemand.ToString()
         };
 
-        var functionResult = _kernel.CreateFunctionFromPrompt(promptBuilder).InvokeAsync(kernelArguments);
+        var functionResult = _kernelWrapper.InvokePromptAsync(promptBuilder, kernelArguments);
 
         var returnedPlan = functionResult.ToString();
         if (string.IsNullOrWhiteSpace(returnedPlan))

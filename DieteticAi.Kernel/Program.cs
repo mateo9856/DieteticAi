@@ -1,8 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using DietAI.Kernel.Models;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
+using DieteticAi.Tools;
+using DieteticAi.Tools.Wrappers;
+using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 
 namespace DieteticAi;
@@ -11,13 +12,15 @@ class Program
 { 
     static async Task Main(string[] args)
     {
-        var kernel = Kernel.CreateBuilder()
-            .AddOllamaChatCompletion(
-                modelId: "llama3",
-                endpoint: new Uri("http://localhost:11434")
-                ).Build();
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", false, true)
+            .Build();
 
-        var dietPlugin = new DietPlugin(new List<Diets>(), kernel);
+        var aiConfig = new AiModelSelector(configuration);
+        var kernel = aiConfig.BuildKernel();
+        
+        var dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));
         kernel.Plugins.AddFromObject(dietPlugin, "DietPlugin");
         
         Console.WriteLine("Enter your data, first age, next weight, sex(type Male, Female or Unbinary)");
