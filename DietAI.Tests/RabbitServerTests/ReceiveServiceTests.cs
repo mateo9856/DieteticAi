@@ -36,7 +36,7 @@ public class ReceiveServiceTests
             Arg.Any<IAsyncBasicConsumer>(),
             Arg.Any<System.Threading.CancellationToken>()).Returns(Task.FromResult("tag-1"));
 
-        var tag = await _receiver.StartConsumingAsync(queue, async ea => await Task.CompletedTask, autoAck: true);
+        var tag = await _receiver.StartConsumingAsync(queue, async (obj, ea) => await Task.CompletedTask, autoAck: true);
 
         await _topicFactory.Received(1).DeclareQueueAsync(queue);
         Assert.That(tag, Is.EqualTo("tag-1"));
@@ -55,7 +55,7 @@ public class ReceiveServiceTests
             Arg.Any<IDictionary<string, object>>(),
             Arg.Any<IAsyncBasicConsumer>(),
             Arg.Any<System.Threading.CancellationToken>()).Returns(Task.FromResult("ctag"));
-        var tag = await _receiver.StartConsumingAsync(queue, async ea => await Task.CompletedTask, autoAck: true);
+        var tag = await _receiver.StartConsumingAsync(queue, async (obj, ea) => await Task.CompletedTask, autoAck: true);
 
         await _receiver.StopConsumingAsync(tag);
 
