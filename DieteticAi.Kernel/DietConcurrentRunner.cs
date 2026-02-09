@@ -31,8 +31,7 @@ public class DietConcurrentRunner(
         var data = DeserializeConsumerData<HumanDataDto>(ev.Body.ToArray());
         await receiveService.AckMessageAsync(CreatePlanQueueName, ev);
 
-        var result = dietService.GenerateNewOrGetPlan(data.Age, data.ActualWeight, data.ActualHeight, data.CaloricDemand, data.Sex,
-            data.DietType);
+        var result = dietService.GenerateNewOrGetPlan(data);
         
         //TODO:Another parameter and return data from DietService and fix/refactor DietPlugin
     }
@@ -43,8 +42,7 @@ public class DietConcurrentRunner(
         var data = DeserializeConsumerData<UpdateHumanDataDto>(ev.Body.ToArray());
         await receiveService.AckMessageAsync(UpdatePlanQueueName, ev);
         
-        var result = dietService.GenerateNewOrGetPlan(data.Age, data.ActualWeight, data.ActualHeight, data.CaloricDemand, data.Sex,
-            data.DietType);
+        var result = dietService.GenerateNewOrGetPlan(data);
         
         //TODO:Another parameter and return data from DietService and fix/refactor DietPlugin
     }

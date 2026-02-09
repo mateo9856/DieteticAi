@@ -18,6 +18,43 @@ public class DietPlugin
         _diets = diets;
         _kernelWrapper = kernel;
     }
+
+    [KernelFunction("update_existing_plan")]
+    [Description("Define previous plan and then update to new plan details.")]
+    public string UpdatePlanByPrompt(
+        [Description("Actual age of person")] int actualAge,
+        [Description("Previous age of person")] int previousAge,
+        [Description("Current weight in kg")] decimal currentWeight,
+        [Description("Previous weight in kg")] decimal previousWeight,
+        [Description("Current height in cm")] decimal currentHeight,
+        [Description("Previous height in kg")] decimal previousHeight,
+        [Description("Current caloric demand")] decimal currentCaloricDemand,
+        [Description("Previous caloric demand")] decimal previousCaloricDemand,
+        [Description("Sex of the Person (Male/Female/Unbinary)")] SexEnum sex,
+        [Description("Type of diet")]DietType dietType
+        )
+    {
+        var existingPlans = _diets.Where(diet => 
+            diet.Age == previousAge 
+            && diet.ForWeight == previousWeight
+            && diet.ForHeight == previousHeight
+            && diet.CaloricValue == previousCaloricDemand
+            && diet.ForSex == sex
+            && diet.DietType == dietType);
+
+        var existingPlan = existingPlans.FirstOrDefault();
+        if (existingPlan is null)
+        {
+            throw new Exception("Plan does not exist, please generate new plan.");
+        }
+
+        var updatedPlan = UpdatePlanForPrompt(existingPlan.Id, actualAge, currentWeight, currentHeight, sex, dietType, currentCaloricDemand, previousWeight, previousHeight, previousCaloricDemand);
+
+        var index = _diets.IndexOf(existingPlan);
+        _diets[index] = updatedPlan;
+
+        return updatedPlan.Description;
+    }
     
     [KernelFunction("get_diet_or_generate")]
     [Description("Find suggested plan if it exist, otherwise generate new plan.")]
