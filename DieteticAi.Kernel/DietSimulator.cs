@@ -43,7 +43,7 @@ public class DietSimulator
             var plan = _dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.ActualHeight,
                 dto.CaloricDemand, dto.Sex, dto.DietType);
 
-            Console.WriteLine($"Generated plan: \n{plan}");
+            Console.WriteLine($"Generated plan: \n{plan.Description}");
         }
         catch (Exception e)
         {

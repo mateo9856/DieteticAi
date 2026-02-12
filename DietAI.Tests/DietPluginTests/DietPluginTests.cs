@@ -31,7 +31,7 @@ public class DietPluginTests
         var result = _dietPlugin.GetPlanFromListOrPrompt(30, 80m, 185m, 2000, SexEnum.Male, DietType.Keto);
 
         // Assert
-        result.Should().Be("Existing plan");
+        result.Description.Should().Be("Existing plan");
     }
 
     [Test]
@@ -50,17 +50,17 @@ public class DietPluginTests
         var result = _dietPlugin.GetPlanFromListOrPrompt(25, 70m, 170m, 2500, SexEnum.Female, DietType.HighProtein);
 
         // Assert
-        result.Should().Be(mockData.Description);
+        result.Description.Should().Be(mockData.Description);
     }
 
     [Test]
     public void GetPlanFromListOrPrompt_ReturnsExistingPlan_WhenAgeIsWithinRange()
     {
         // Act - age 31 should match age 30 (within 2 year range)
-        var result = _dietPlugin.GetPlanFromListOrPrompt(31, 80m, 168m, 2300, SexEnum.Male, DietType.Standard);
+        var result = _dietPlugin.GetPlanFromListOrPrompt(31, 80m, 168m, 2300, SexEnum.Male, DietType.Keto);
 
         // Assert
-        result.Should().Be("Existing plan");
+        result.Description.Should().Be("Existing plan");
     }
 
     [Test]
@@ -70,7 +70,7 @@ public class DietPluginTests
         var result = _dietPlugin.GetPlanFromListOrPrompt(30, 85m, 181, 0, SexEnum.Male, DietType.Keto);
 
         // Assert
-        result.Should().Be("Existing plan");
+        result.Description.Should().Be("Existing plan");
     }
 
     [Test]

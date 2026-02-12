@@ -14,7 +14,7 @@ public class DietService
         _dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));
     }
 
-    public string GenerateNewOrGetPlan(HumanDataDto dto)
+    public Diets GenerateNewOrGetPlan(HumanDataDto dto)
     {
         return _dietPlugin.GetPlanFromListOrPrompt(dto.Age,
             dto.ActualWeight,
@@ -24,7 +24,7 @@ public class DietService
             dto.DietType);
     }
 
-    public string UpdateExistingPlan(UpdateHumanDataDto dto)
+    public Diets UpdateExistingPlan(UpdateHumanDataDto dto)
     {
         return _dietPlugin.UpdatePlanByPrompt(dto.Age,
             dto.PreviousAge,
