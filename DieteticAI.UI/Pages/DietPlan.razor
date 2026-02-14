@@ -3,6 +3,7 @@
 @using DieteticAI.UI.Services.AiPlanSender
 @using DieteticAI.UI.Services.AiPlanSender.Abstractions
 @using DieteticAI.UI.Services.AiPlanSender.Models
+@using DieteticAI.UI.Services.AiPlanSender.Requests
 @using DieteticAI.UI.Tools
 @inject IAiPlanSender AiPlanSenderService
 
@@ -144,6 +145,10 @@
             var dietExtensions = new DietsExtensions();
             planRequest.CaloricDemand = dietExtensions.CalculateCalories(planRequest.Age, planRequest.ActualWeight, planRequest.Sex);
             var dietReq = await AiPlanSenderService.SendPlanRequestAsync(planRequest);
+            if (dietReq is not null)
+            {
+                generatedDiet = dietReq;
+            }
             showResults = true;
         }
         catch (Exception ex)
@@ -157,5 +162,4 @@
         }
     }
     
-
 }

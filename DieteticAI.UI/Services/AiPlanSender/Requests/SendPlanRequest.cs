@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using DieteticAI.UI.Services.AiPlanSender.Enums;
 
-namespace DieteticAI.UI.Services.AiPlanSender;
+namespace DieteticAI.UI.Services.AiPlanSender.Requests;
 
 public class SendPlanRequest
 {

@@ -2,6 +2,7 @@ using System.Text.Json;
 using DietAI.RabbitServer.Abstractions;
 using DieteticAI.UI.Services.AiPlanSender.Abstractions;
 using DieteticAI.UI.Services.AiPlanSender.Models;
+using DieteticAI.UI.Services.AiPlanSender.Requests;
 using DieteticAI.UI.Tools;
 
 namespace DieteticAI.UI.Services.AiPlanSender.Implementations;
@@ -10,6 +11,7 @@ public class AiPlanSenderService : IAiPlanSender
 {
     private const string CreateDietPlanQueueName = "create_plan_request";
     private const string UpdatePlanQueueName = "update_plan_request";
+    private const string DietPlanResponseQueueName = "diet_plan_response";
     
     private readonly ISenderService _senderService;
     private readonly IReceiveService _receiveService;
@@ -36,7 +38,7 @@ public class AiPlanSenderService : IAiPlanSender
         try
         {
             // Add user context to request
-            var requestWithContext = new PlanRequestWithContext
+            var requestWithContext = new PlanRequestWithContext<SendPlanRequest>
             {
                 SendPlanRequest = request,
                 UserId = _sessionManager.UserId!,
@@ -67,9 +69,44 @@ public class AiPlanSenderService : IAiPlanSender
         }
     }
 
-    public Task<Diets> SendPlanUpdateAsync(SendPlanRequest update, CancellationToken cancellationToken = default)
+    public async Task<Diets> SendPlanUpdateAsync(SendUpdatePlanRequest update, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+
+        if (!_sessionManager.IsUserLoaded)
+            throw new InvalidOperationException("User session must be loaded before requesting a diet plan");
+
+        try
+        {
+            // Add user context to request
+            var requestWithContext = new PlanRequestWithContext<SendUpdatePlanRequest>
+            {
+                SendPlanRequest = update,
+                UserId = _sessionManager.UserId!,
+                RequestId = Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
+            };
+
+            // Send request to AI kernel
+            await _senderService.SendToQueueAsync(
+                UpdatePlanQueueName,
+                requestWithContext,
+                persistent: true);
+
+            // Wait for response (with timeout)
+            var responseTimeout = TimeSpan.FromSeconds(30);
+            var responseTask = WaitForResponseAsync(requestWithContext.RequestId, responseTimeout, cancellationToken);
+            
+            var diet = await responseTask;
+            return diet;
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException("Diet plan request timed out. The AI kernel did not respond in time.");
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to send diet plan request", ex);
+        }
     }
 
     /// <summary>
@@ -87,7 +124,7 @@ public class AiPlanSenderService : IAiPlanSender
             while (DateTime.UtcNow - startTime < timeout)
             {
                 var message = await _receiveService.GetMessageAsync(
-                    $"{"DietPlanResponseQueueName"}:{requestId}",
+                    $"{DietPlanResponseQueueName}:{requestId}",
                     autoAck: true);
 
                 if (message is not null)
@@ -115,9 +152,9 @@ public class AiPlanSenderService : IAiPlanSender
 /// <summary>
 /// Extended request with metadata for tracking and routing
 /// </summary>
-public class PlanRequestWithContext
+public class PlanRequestWithContext<T> where T : SendPlanRequest
 {
-    public SendPlanRequest SendPlanRequest { get; set; } = default!;
+    public T SendPlanRequest { get; set; } = default!;
     public string UserId { get; set; } = default!;
     public string RequestId { get; set; } = default!;
     public DateTime Timestamp { get; set; }

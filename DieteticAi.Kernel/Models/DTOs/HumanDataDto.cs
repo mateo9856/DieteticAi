@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using DieteticAi.Models;
 
-namespace DietAI.Kernel.Models;
+namespace DietAI.AiKernel.Models.DTOs;
 
 public class HumanDataDto
 {

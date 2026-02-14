@@ -1,4 +1,4 @@
-using DietAI.Kernel.Models;
+using DietAI.AiKernel.Models.DTOs;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
 using DieteticAi.Tools.Wrappers;
