@@ -46,7 +46,6 @@
                     <div class="mb-4">
                         <label for="sex" class="form-label">Gender</label>
                         <InputSelect @bind-Value="planRequest.Sex" class="form-select" id="sex">
-                            <option value="">Select your gender</option>
                             <option value="@SexEnum.Male">Male</option>
                             <option value="@SexEnum.Female">Female</option>
                             <option value="@SexEnum.Unbinary">Non-binary</option>
@@ -55,9 +54,8 @@
                     </div>
                     
                     <div class="mb-4">
-                        <label for="dietType" class="form-label">
+                        <label for="dietType" class="form-label">Diet Type</label>
                             <InputSelect @bind-Value="planRequest.DietType" class="form-select" id="sex">
-                                <option value="">Select your gender</option>
                                 <option value="@DietType.Standard">Standard</option>
                                 <option value="@DietType.Vegan">Vegan</option>
                                 <option value="@DietType.Vegetarian">Vegetarian</option>
@@ -66,8 +64,7 @@
                                 <option value="@DietType.GlutenFree">Gluten free</option>
                                 <option value="@DietType.HighProtein">High protein</option>
                             </InputSelect>
-                            <ValidationMessage For="@(() => planRequest.Sex)" class="text-danger" />
-                        </label>
+                            <ValidationMessage For="@(() => planRequest.DietType)" class="text-danger" />
                     </div>
                     
                     <div class="text-center">
