@@ -6,16 +6,19 @@ namespace DieteticAI.UI.Tools;
 public class TopicManager
 {
     private readonly IRabbitConnectionFactory _connectionFactory;
-    private ITopicFactory? _topicFactory;
+    private ITopicFactory _topicFactory;
 
-    public TopicManager(IRabbitConnectionFactory connectionFactory, ITopicFactory? topicFactory = null)
+    public TopicManager(IRabbitConnectionFactory connectionFactory, ITopicFactory topicFactory)
     {
         _connectionFactory = connectionFactory;
         _topicFactory = topicFactory;
     }
     public async Task<IChannel> GetOrPrepareChannel()
     {
-        if (_topicFactory is null || _topicFactory?.ActiveChannel is null || _topicFactory.ActiveChannel.IsClosed)
+        if(_topicFactory is null)
+            throw new NullReferenceException("Topic Factory is not initialized");
+
+        if (_topicFactory.ActiveChannel is null || _topicFactory.ActiveChannel.IsClosed)
         {
             var connection = await _connectionFactory
             .WithUserName("guest")
