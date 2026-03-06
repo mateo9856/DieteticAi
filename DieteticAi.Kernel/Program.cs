@@ -7,6 +7,7 @@ using DietAI.RabbitServer.Implementations.SenderService;
 using DieteticAi.Tools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace DieteticAi;
@@ -32,19 +33,20 @@ class Program
             return;
         }
 
-        ServiceCollection services = new();
-        services.AddTransient<IReceiveService, ReceiverService>();
-        services.AddTransient<ISenderService, SenderService>();
-        services.AddTransient<DietService>(serviceProvider => new DietService(kernel));
-        services.AddSingleton<DietConcurrentRunner>();
-        services.AddLogging(builder =>
-        {
-            builder.AddEventSourceLogger();
-        });
-        
-        var serviceProvider = services.BuildServiceProvider();
-        await serviceProvider.GetRequiredService<DietConcurrentRunner>()
-            .Run();
+        var host = Host.CreateDefaultBuilder(args)
+            .ConfigureServices(services =>
+            {
+                services.AddTransient<IReceiveService, ReceiverService>();
+                services.AddTransient<ISenderService, SenderService>();
+                services.AddTransient<DietService>(serviceProvider => new DietService(kernel));
+                services.AddHostedService<DietConcurrentRunner>();
+                services.AddLogging(builder =>
+                {
+                    builder.AddEventSourceLogger();
+                });
+            })
+            .Build();
 
+        await host.RunAsync();
     }    
 }

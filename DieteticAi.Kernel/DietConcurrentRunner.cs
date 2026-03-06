@@ -3,6 +3,7 @@ using DietAI.AiKernel.Models.DTOs;
 using DietAI.AiKernel.Services;
 using DietAI.RabbitServer.Abstractions;
 using DieteticAi.Models;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RabbitMQ.Client.Events;
@@ -13,39 +14,57 @@ public class DietConcurrentRunner(
     ILogger<DietConcurrentRunner> logger,
     IReceiveService receiveService,
     ISenderService senderService,
-    DietService dietService)
+    DietService dietService) : IHostedService
 {
     private const string CreatePlanQueueName = "create_plan_request";
     private const string UpdatePlanQueueName = "update_plan_request";
     private const string DietPlanResponseQueueName = "diet_plan_response";
 
-    public async Task Run(CancellationToken cancellationToken = default)
+    private string? _createConsumerTag;
+    private string? _updateConsumerTag;
+
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting DietConcurrentRunner");
-        await receiveService.StartConsumingAsync(CreatePlanQueueName, OnCreateNewPlanReceived);
-        await receiveService.StartConsumingAsync(UpdatePlanQueueName, OnUpdateNewPlanReceived);
+        _createConsumerTag = await receiveService.StartConsumingAsync(CreatePlanQueueName, OnCreateNewPlanReceived);
+        _updateConsumerTag = await receiveService.StartConsumingAsync(UpdatePlanQueueName, OnUpdateNewPlanReceived);
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Stopping DietConcurrentRunner");
+        if (_createConsumerTag != null)
+            await receiveService.StopConsumingAsync(_createConsumerTag);
+        if (_updateConsumerTag != null)
+            await receiveService.StopConsumingAsync(_updateConsumerTag);
     }
     
     private async Task OnCreateNewPlanReceived(object sender, BasicDeliverEventArgs ev)
     {
-        logger.LogInformation("Creating new plan");
-        var data = DeserializeConsumerData<PlanTopicRequest<HumanDataDto>>(ev.Body.ToArray());
-        await receiveService.AckMessageAsync(CreatePlanQueueName, ev);
+        await Task.Run(async () =>
+        {
+            logger.LogInformation("Creating new plan");
+            var data = DeserializeConsumerData<PlanTopicRequest<HumanDataDto>>(ev.Body.ToArray());
+            await receiveService.AckMessageAsync(CreatePlanQueueName, ev);
 
-        var result = dietService.GenerateNewOrGetPlan(data.Request);
+            var result = dietService.GenerateNewOrGetPlan(data.Request);
 
-        await senderService.SendToQueueAsync($"{DietPlanResponseQueueName}:{data.RequestId}", result, false);
+            await senderService.SendToQueueAsync($"{DietPlanResponseQueueName}:{data.RequestId}", result, false);
+        });
     }
 
     private async Task OnUpdateNewPlanReceived(object sender, BasicDeliverEventArgs ev)
     {
-        logger.LogInformation("Updating new plan");
-        var data = DeserializeConsumerData<PlanTopicRequest<UpdateHumanDataDto>>(ev.Body.ToArray());
-        await receiveService.AckMessageAsync(UpdatePlanQueueName, ev);
-        
-        var result = dietService.GenerateNewOrGetPlan(data.Request);
+        await Task.Run(async () =>
+        {
+            logger.LogInformation("Updating new plan");
+            var data = DeserializeConsumerData<PlanTopicRequest<UpdateHumanDataDto>>(ev.Body.ToArray());
+            await receiveService.AckMessageAsync(UpdatePlanQueueName, ev);
+            
+            var result = dietService.GenerateNewOrGetPlan(data.Request);
 
-        await senderService.SendToQueueAsync($"{DietPlanResponseQueueName}:{data.RequestId}", result, false);
+            await senderService.SendToQueueAsync($"{DietPlanResponseQueueName}:{data.RequestId}", result, false);
+        });
     }
 
     private T DeserializeConsumerData<T>(byte[] data)
