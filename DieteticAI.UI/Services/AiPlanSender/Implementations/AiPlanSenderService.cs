@@ -16,15 +16,18 @@ public class AiPlanSenderService : IAiPlanSender
     private readonly ISenderService _senderService;
     private readonly IReceiveService _receiveService;
     private readonly SessionManager _sessionManager;
-
+    private readonly TopicManager _topicManager;
+    
     public AiPlanSenderService(
         ISenderService senderService,
         IReceiveService receiveService,
-        SessionManager sessionManager)
+        SessionManager sessionManager,
+        TopicManager topicManager)
     {
         _senderService = senderService;
         _receiveService = receiveService;
         _sessionManager = sessionManager;
+        _topicManager = topicManager;
     }
 
     /// <summary>
@@ -37,6 +40,8 @@ public class AiPlanSenderService : IAiPlanSender
 
         try
         {
+            await PrepareChannel();
+            
             // Add user context to request
             var requestWithContext = new PlanRequestWithContext<SendPlanRequest>
             {
@@ -71,12 +76,14 @@ public class AiPlanSenderService : IAiPlanSender
 
     public async Task<Diets> SendPlanUpdateAsync(SendUpdatePlanRequest update, CancellationToken cancellationToken = default)
     {
-
+    
         if (!_sessionManager.IsUserLoaded)
             throw new InvalidOperationException("User session must be loaded before requesting a diet plan");
 
         try
         {
+            await PrepareChannel();
+            
             // Add user context to request
             var requestWithContext = new PlanRequestWithContext<SendUpdatePlanRequest>
             {
@@ -117,45 +124,41 @@ public class AiPlanSenderService : IAiPlanSender
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeout);
 
-        try
+        // Poll for response (you might want to implement a more robust solution with SignalR or similar)
+        var startTime = DateTime.UtcNow;
+        while (DateTime.UtcNow - startTime < timeout)
         {
-            // Poll for response (you might want to implement a more robust solution with SignalR or similar)
-            var startTime = DateTime.UtcNow;
-            while (DateTime.UtcNow - startTime < timeout)
+            var message = await _receiveService.GetMessageAsync(
+                $"{DietPlanResponseQueueName}:{requestId}",
+                autoAck: true);
+
+            if (message is not null)
             {
-                var message = await _receiveService.GetMessageAsync(
-                    $"{DietPlanResponseQueueName}:{requestId}",
-                    autoAck: true);
-
-                if (message is not null)
-                {
-                    var body = message.Body.ToArray();
-                    var json = System.Text.Encoding.UTF8.GetString(body);
-                    var diet = JsonSerializer.Deserialize<Diets>(json);
+                var body = message.Body.ToArray();
+                var json = System.Text.Encoding.UTF8.GetString(body);
+                var diet = JsonSerializer.Deserialize<Diets>(json);
                     
-                    return diet ?? throw new InvalidOperationException("Failed to deserialize diet response");
-                }
-
-                // Wait before polling again
-                await Task.Delay(500, cts.Token);
+                return diet ?? throw new InvalidOperationException("Failed to deserialize diet response");
             }
 
-            throw new TimeoutException($"No response received for request {requestId}");
+            // Wait before polling again
+            await Task.Delay(500, cts.Token);
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
+
+        throw new TimeoutException($"No response received for request {requestId}");
     }
+
+    private async Task PrepareChannel() => await _topicManager.GetOrPrepareChannel();
+
 }
 
 /// <summary>
 /// Extended request with metadata for tracking and routing
 /// </summary>
-public class PlanRequestWithContext<T> where T : SendPlanRequest
+internal class PlanRequestWithContext<T> where T : SendPlanRequest
 {
-    public T SendPlanRequest { get; set; } = default!;
-    public string UserId { get; set; } = default!;
-    public string RequestId { get; set; } = default!;
-    public DateTime Timestamp { get; set; }
+    public required T SendPlanRequest { get; init; }
+    public required string UserId { get; init; }
+    public required string RequestId { get; init; }
+    public DateTime Timestamp { get; init; }
 }
