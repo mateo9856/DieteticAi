@@ -2,6 +2,8 @@ using DietAi.AiKernel;
 using DietAI.AiKernel;
 using DietAI.AiKernel.Services;
 using DietAI.RabbitServer.Abstractions;
+using DietAI.RabbitServer.Abstractions.RabbitConnection;
+using DietAI.RabbitServer.Implementations.RabbitConnection;
 using DietAI.RabbitServer.Implementations.ReceiverService;
 using DietAI.RabbitServer.Implementations.SenderService;
 using DieteticAi.Tools;
@@ -36,10 +38,19 @@ class Program
         var host = Host.CreateDefaultBuilder(args)
             .ConfigureServices(services =>
             {
+                services.AddSingleton<IConfiguration>(configuration);
+
+                services.AddSingleton<IRabbitConnectionFactory, RabbitConnectionFactory>();
+                services.AddSingleton<ITopicFactory, TopicFactory>();
+                services.AddSingleton<TopicManager>();
+
                 services.AddTransient<IReceiveService, ReceiverService>();
                 services.AddTransient<ISenderService, SenderService>();
-                services.AddTransient<DietService>(serviceProvider => new DietService(kernel));
+
+                services.AddTransient(serviceProvider => new DietService(kernel));
+
                 services.AddHostedService<DietConcurrentRunner>();
+
                 services.AddLogging(builder =>
                 {
                     builder.AddEventSourceLogger();

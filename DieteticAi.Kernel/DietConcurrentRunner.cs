@@ -3,6 +3,7 @@ using DietAI.AiKernel.Models.DTOs;
 using DietAI.AiKernel.Services;
 using DietAI.RabbitServer.Abstractions;
 using DieteticAi.Models;
+using DieteticAi.Tools;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -14,7 +15,8 @@ public class DietConcurrentRunner(
     ILogger<DietConcurrentRunner> logger,
     IReceiveService receiveService,
     ISenderService senderService,
-    DietService dietService) : IHostedService
+    DietService dietService,
+    TopicManager topicManager) : IHostedService
 {
     private const string CreatePlanQueueName = "create_plan_request";
     private const string UpdatePlanQueueName = "update_plan_request";
@@ -26,6 +28,8 @@ public class DietConcurrentRunner(
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting DietConcurrentRunner");
+        await topicManager.GetOrPrepareChannel();
+
         _createConsumerTag = await receiveService.StartConsumingAsync(CreatePlanQueueName, OnCreateNewPlanReceived);
         _updateConsumerTag = await receiveService.StartConsumingAsync(UpdatePlanQueueName, OnUpdateNewPlanReceived);
     }
