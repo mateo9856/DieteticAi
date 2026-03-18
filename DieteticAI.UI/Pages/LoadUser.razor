@@ -43,9 +43,33 @@
                 }
                 else
                 {
-                    <div class="alert alert-warning" role="alert">
-                        <h4 class="alert-heading">⚠️ No User Loaded</h4>
-                        <p>User session is not initialized. Please wait while we load your user data...</p>
+                    <div class="login-form">
+                        <h3>Login</h3>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" @bind="Username" placeholder="Enter username" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" @bind="Password" placeholder="Enter password" />
+                        </div>
+                        <button class="btn btn-primary w-100" @onclick="Login" disabled="@_isLoggingIn">
+                            @if (_isLoggingIn)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2">    Logging in...
+                                </span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-box-arrow-in-right">Login</i>
+                            }
+                        </button>
+                        @if (!string.IsNullOrEmpty(ErrorMessage))
+                        {
+                            <div class="alert alert-danger mt-3" role="alert">
+                                @ErrorMessage
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -61,6 +85,11 @@
 </div>
 
 @code {
+    private string Username { get; set; } = string.Empty;
+    private string Password { get; set; } = string.Empty;
+    private bool _isLoggingIn = false;
+    private string ErrorMessage { get; set; } = string.Empty;
+
     protected override void OnInitialized()
     {
         // Load user data if not already loaded
@@ -69,6 +98,41 @@
             // Generate a unique ID (GUID)
             var uniqueId = Guid.NewGuid().ToString();
             SessionManager.UserId = uniqueId;
+        }
+    }
+
+    private async Task Login()
+    {
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessage = "Please enter both username and password";
+            return;
+        }
+
+        _isLoggingIn = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            // Simulate authentication (in real app, this would call an API)
+            if (Username == "admin" && Password == "password")
+            {
+                // Generate a unique ID (GUID)
+                var uniqueId = Guid.NewGuid().ToString();
+                SessionManager.UserId = uniqueId;
+            }
+            else
+            {
+                ErrorMessage = "Invalid username or password";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Login failed: " + ex.Message;
+        }
+        finally
+        {
+            _isLoggingIn = false;
         }
     }
 
