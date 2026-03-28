@@ -1,0 +1,26 @@
+﻿services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    ports:
+      - "5671:5671"
+      - "15671:15671"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASSWORD: admin
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./ca.crt:/etc/rabbitmq/certs/ca/crt:ro
+      - ./server.crt:/etc/rabbitmq/certs/server.crt:ro
+      - ./server.key:/etc/rabbitmq/certs/server.key:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_log:
