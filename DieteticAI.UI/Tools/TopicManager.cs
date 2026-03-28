@@ -26,12 +26,18 @@ public class TopicManager
             var hostName = _configuration["rabbitMq:hostName"] ?? "localhost";
             var userName = _configuration["rabbitMq:userName"] ?? "guest";
             var password = _configuration["rabbitMq:password"] ?? "guest";
-
+            var portNumber = _configuration["rabbitMq:port"] ?? "5672";
+            var certPath = _configuration["rabbitMq:certPath"] ?? "";
+            
             var connection = await _connectionFactory
-            .WithUserName(userName)
-            .WithPassword(password)
-            .WithHostName(hostName)
-            .PrepareConnectionAsync();
+                .InitConnectionFactory()
+                .WithUserName(userName)
+                .WithPassword(password)
+                .WithHostName(hostName)
+                .WithPortNumber(int.Parse(portNumber))
+                .WithTls(certPath)
+                .WithVirtualHost("/")
+                .PrepareConnectionAsync();
 
             return await _topicFactory.CreateByConnectionAsync(connection);
         }

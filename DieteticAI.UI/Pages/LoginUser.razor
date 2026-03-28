@@ -1,6 +1,7 @@
 @page "/loadUser"
 @using DieteticAI.UI.Tools
 @inject SessionManager SessionManager
+@inject IConfiguration Configuration
 @inject NavigationManager Navigation
 
 <PageTitle>Load User</PageTitle>
@@ -53,17 +54,23 @@
                             <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" @bind="Password" placeholder="Enter password" />
                         </div>
-                        <button class="btn btn-primary w-100" @onclick="Login" disabled="@_isLoggingIn">
-                            @if (_isLoggingIn)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2">    Logging in...
-                                </span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-box-arrow-in-right">Login</i>
-                            }
-                        </button>
+                        <div class="mb-3">
+                            <button class="btn btn-outline-primary w-100 mb-2" @onclick="OidcLogin">
+                                <i class="bi bi-shield-lock"></i> OIDC Connect (Keycloak)
+                            </button>
+                            <button class="btn btn-primary w-100" @onclick="Login" disabled="@_isLoggingIn">
+                                @if (_isLoggingIn)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2">
+                                        Logging in...
+                                    </span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-box-arrow-in-right">Login</i>
+                                }
+                            </button>
+                        </div>
                         @if (!string.IsNullOrEmpty(ErrorMessage))
                         {
                             <div class="alert alert-danger mt-3" role="alert">
@@ -73,13 +80,15 @@
                     </div>
                 }
             </div>
-
+            
+            @if(_isUserTestMode) {
             <!-- Clear Session Button -->
-            <div class="dietetic-form mt-3">
-                <button class="btn btn-danger w-100" @onclick="ClearSession" disabled="@(!SessionManager.IsUserLoaded)">
-                    <i class="bi bi-trash"></i> Clear Session
-                </button>
-            </div>
+                <div class="dietetic-form mt-3">
+                    <button class="btn btn-danger w-100" @onclick="ClearSession" disabled="@(!SessionManager.IsUserLoaded)">
+                        <i class="bi bi-trash"></i> Clear Session
+                    </button>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -88,12 +97,14 @@
     private string Username { get; set; } = string.Empty;
     private string Password { get; set; } = string.Empty;
     private bool _isLoggingIn = false;
+    private bool _isUserTestMode = false;
     private string ErrorMessage { get; set; } = string.Empty;
 
     protected override void OnInitialized()
     {
         // Load user data if not already loaded
-        if (!SessionManager.IsUserLoaded)
+        _isUserTestMode = Configuration["debugUser"] == "true";
+        if (!SessionManager.IsUserLoaded && _isUserTestMode)
         {
             // Generate a unique ID (GUID)
             var uniqueId = Guid.NewGuid().ToString();
@@ -136,6 +147,11 @@
         }
     }
 
+    private async Task OidcLogin()
+    {
+        
+    }
+    
     private void ClearSession()
     {
         SessionManager.UserId = null;

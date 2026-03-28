@@ -29,6 +29,7 @@ public class TopicManager
             var password = _configuration["rabbitMq:password"] ?? "guest";
 
             var connection = await _connectionFactory
+                .InitConnectionFactory()
                 .WithUserName(userName)
                 .WithPassword(password)
                 .WithHostName(hostName)
