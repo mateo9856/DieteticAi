@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using DieteticAi.Models;
+using DieteticAI.UI.Services.AiPlanSender.Enums;
 
-namespace DietAI.Kernel.Models;
+namespace DieteticAI.UI.Services.AiPlanSender.Requests;
 
-public class HumanDataDto
+public class SendPlanRequest
 {
     [Required]
     [Range(15, 100)]

@@ -16,20 +16,26 @@ public class ReceiverService : IReceiveService
         _topicFactory = topicFactory;
     }
 
-    public async Task<string> StartConsumingAsync(string queueName, Func<BasicDeliverEventArgs, Task> handler, bool autoAck = false)
+    public async Task<string> StartConsumingAsync(string queueName, Func<object, BasicDeliverEventArgs, Task> handler, bool autoAck = false)
     {
         await _topicFactory.DeclareQueueAsync(queueName);
 
         var channel = EnsureChannelIsActive();
         
         var eventingHandler = new AsyncEventingBasicConsumer(channel);
-        eventingHandler.ReceivedAsync += async (model, ea) => await handler(ea);
+        eventingHandler.ReceivedAsync += async (sender, ea) => await handler(sender, ea);
 
         var consumerTag = await channel.BasicConsumeAsync(queueName, autoAck: autoAck, consumer: eventingHandler);
 
         _consumers.TryAdd(consumerTag, queueName);
 
         return consumerTag;
+    }
+
+    public async Task AckMessageAsync(string queueName, BasicDeliverEventArgs ev)
+    {
+        var channel = EnsureChannelIsActive();
+        await channel.BasicAckAsync(ev.DeliveryTag, false);
     }
 
     public async Task RejectAsync(ulong deliveryTag, bool requeue = false)

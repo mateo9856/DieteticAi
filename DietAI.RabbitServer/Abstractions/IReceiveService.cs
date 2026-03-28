@@ -5,8 +5,10 @@ namespace DietAI.RabbitServer.Abstractions;
 
 public interface IReceiveService
 {
-    Task<string> StartConsumingAsync(string queueName, Func<BasicDeliverEventArgs, Task> handler, bool autoAck = false);
-
+    Task<string> StartConsumingAsync(string queueName, Func<object, BasicDeliverEventArgs, Task> handler, bool autoAck = false);
+    
+    Task AckMessageAsync(string queueName, BasicDeliverEventArgs ev);
+    
     Task RejectAsync(ulong deliveryTag, bool requeue = false);
 
     Task RejectMultipleAsync(ulong deliveryTag, bool requeue = false);

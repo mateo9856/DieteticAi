@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DieteticAi.Constaints;
 using DieteticAi.Models;
 using DieteticAi.Tools.Wrappers;
@@ -17,10 +18,47 @@ public class DietPlugin
         _diets = diets;
         _kernelWrapper = kernel;
     }
+
+    [KernelFunction("update_existing_plan")]
+    [Description("Define previous plan and then update to new plan details.")]
+    public Diets UpdatePlanByPrompt(
+        [Description("Actual age of person")] int actualAge,
+        [Description("Previous age of person")] int previousAge,
+        [Description("Current weight in kg")] decimal currentWeight,
+        [Description("Previous weight in kg")] decimal previousWeight,
+        [Description("Current height in cm")] decimal currentHeight,
+        [Description("Previous height in kg")] decimal previousHeight,
+        [Description("Current caloric demand")] decimal currentCaloricDemand,
+        [Description("Previous caloric demand")] decimal previousCaloricDemand,
+        [Description("Sex of the Person (Male/Female/Unbinary)")] SexEnum sex,
+        [Description("Type of diet")]DietType dietType
+        )
+    {
+        var existingPlans = _diets.Where(diet => 
+            diet.Age == previousAge 
+            && diet.ForWeight == previousWeight
+            && diet.ForHeight == previousHeight
+            && diet.CaloricValue == previousCaloricDemand
+            && diet.ForSex == sex
+            && diet.DietType == dietType);
+
+        var existingPlan = existingPlans.FirstOrDefault();
+        if (existingPlan is null)
+        {
+            throw new Exception("Plan does not exist, please generate new plan.");
+        }
+
+        var updatedPlan = UpdatePlanForPrompt(existingPlan.Id, actualAge, currentWeight, currentHeight, sex, dietType, currentCaloricDemand, previousWeight, previousHeight, previousCaloricDemand);
+
+        var index = _diets.IndexOf(existingPlan);
+        _diets[index] = updatedPlan;
+
+        return updatedPlan;
+    }
     
     [KernelFunction("get_diet_or_generate")]
     [Description("Find suggested plan if it exist, otherwise generate new plan.")]
-    public string GetPlanFromListOrPrompt(
+    public Diets GetPlanFromListOrPrompt(
         [Description("Age of the person")] int age,
         [Description("Current weight in kg")] decimal currentWeight,
         [Description("Current height in cm")] decimal currentHeight,
@@ -49,14 +87,14 @@ public class DietPlugin
         
         if (findingPlan is not null)
         {
-            return findingPlan.Description;
+            return findingPlan;
         }
 
         var parametrizeCaloric = currentCaloricDemand == 0 ? (decimal?)null : currentCaloricDemand;
         var generatedDiet = GenerateNewPlanForPrompt(age, currentWeight, currentHeight, sex, dietType, parametrizeCaloric);
         _diets.Add(generatedDiet);
         
-        return generatedDiet.Description;
+        return generatedDiet;
     }
 
     protected virtual Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, decimal currentHeight, SexEnum sex, DietType dietType, decimal? caloric)
@@ -88,7 +126,12 @@ public class DietPlugin
         try
         {
             JsonDocument.Parse(returnedPlan);
-            return JsonSerializer.Deserialize<Diets>(returnedPlan) 
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() },
+                PropertyNameCaseInsensitive = true
+            };
+            return JsonSerializer.Deserialize<Diets>(returnedPlan, jsonOptions) 
                    ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
         }
         catch
@@ -125,7 +168,12 @@ public class DietPlugin
         try
         {
             JsonDocument.Parse(returnedPlan);
-            return JsonSerializer.Deserialize<Diets>(returnedPlan) 
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() },
+                PropertyNameCaseInsensitive = true
+            };
+            return JsonSerializer.Deserialize<Diets>(returnedPlan, jsonOptions) 
                    ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
         }
         catch
