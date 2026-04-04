@@ -22,15 +22,14 @@ public class JwtMiddleware
 
         if (token != null)
         {
-            if (_jwtTokenService.ValidateToken(token))
+            var principal = _jwtTokenService.GetPrincipalFromToken(token);
+            if (principal is not null)
             {
-                // Token is valid, attach user info to context if needed
-                var expiration = _jwtTokenService.GetTokenExpiration(token);
-                context.Items["TokenExpiration"] = expiration;
+                context.User = principal;
+                context.Items["TokenExpiration"] = _jwtTokenService.GetTokenExpiration(token);
             }
             else
             {
-                // Token is invalid, return 401
                 context.Response.StatusCode = 401;
                 await context.Response.WriteAsync("Unauthorized: Invalid token");
                 return;

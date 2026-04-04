@@ -13,15 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../DietAI.RabbitServer/DietAI.RabbitServer.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="obj\Debug\net10.0\" />
-      <Folder Include="Services\AiPlanSender\Implementations\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
