@@ -3,15 +3,14 @@ using DietAI.Api.Services.Login.Abstractions;
 using DietAI.Api.Services.Login.Models;
 using DietAI.Api.Services.Login.Requests;
 
-namespace DietAI.Api.Endpoints;
+namespace DietAI.Api.Endpoints.V1;
 
-public static class AuthEndpoints
+public static class AuthEndpointsV1
 {
-    public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapAuthEndpointsV1(this WebApplication app)
     {
-        var group = app.MapGroup("/api/auth")
-            .WithTags("Auth");
-
+        var group = app.MapGroupWithVersion("/v1/auth", "Auth", 1);
+        
         group.MapPost("/login", async (
                 LoginRequest request,
                 ILoginService loginService,

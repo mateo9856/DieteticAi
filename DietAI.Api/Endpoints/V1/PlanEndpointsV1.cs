@@ -3,14 +3,13 @@ using DietAI.Api.Services.AiPlanSender.Abstractions;
 using DietAI.Api.Services.AiPlanSender.Models;
 using DietAI.Api.Services.AiPlanSender.Requests;
 
-namespace DietAI.Api.Endpoints;
+namespace DietAI.Api.Endpoints.V1;
 
-public static class PlanEndpoints
+public static class PlanEndpointsV1
 {
-    public static IEndpointRouteBuilder MapPlanEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapPlanEndpointsV1(this WebApplication app)
     {
-        var group = app.MapGroup("/api/plan")
-            .WithTags("Plan");
+        var group = app.MapGroupWithVersion("/v1/plan", "Plan", 1);
 
         group.MapPost("/send", async (
                 SendPlanRequest request,

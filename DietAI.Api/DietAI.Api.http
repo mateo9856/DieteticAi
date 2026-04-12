@@ -1,6 +1,41 @@
 @DietAI.Api_HostAddress = http://localhost:5001
+@ContentType = application/json
 
-GET {{DietAI.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Auth Endpoints
+
+### Login User
+POST {{DietAI.Api_HostAddress}}/v1/auth/login
+Content-Type: {{ContentType}}
+
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+
+###
+
+### Plan Endpoints
+
+### Send Plan Request
+POST {{DietAI.Api_HostAddress}}/v1/plan/send
+Content-Type: {{ContentType}}
+X-User-Id: user123
+
+{
+  "description": "Diet plan request",
+  "preferences": []
+}
+
+###
+
+### Send Plan Update
+POST {{DietAI.Api_HostAddress}}/v1/plan/update
+Content-Type: {{ContentType}}
+X-User-Id: user123
+
+{
+  "planId": "plan123",
+  "updates": []
+}
 
 ###

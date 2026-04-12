@@ -1,4 +1,3 @@
-using DietAI.Api.Endpoints;
 using DietAI.Api.Middleware;
 using DietAI.Api.Options;
 using DietAI.Api.Services;
@@ -12,8 +11,10 @@ using DietAI.RabbitServer.Abstractions.RabbitConnection;
 using DietAI.RabbitServer.Implementations.RabbitConnection;
 using DietAI.RabbitServer.Implementations.ReceiverService;
 using DietAI.RabbitServer.Implementations.SenderService;
-
-const string UiCorsPolicy = "UiClient";
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
+using DietAI.Api;
+using DietAI.Api.Endpoints.V1;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,27 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddOpenApi();
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new UrlSegmentApiVersionReader(),
+        new HeaderApiVersionReader("X-Api-Version"),
+        new QueryStringApiVersionReader("api-version")
+    );
+})
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";            // e.g. v1, v2
+    options.SubstituteApiVersionInUrl = true;
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddTransient<IRabbitConnectionFactory, RabbitConnectionFactory>();
 builder.Services.AddTransient<ITopicFactory, TopicFactory>();
@@ -38,30 +60,33 @@ builder.Services.AddTransient<ISenderService, SenderService>();
 builder.Services.AddScoped<TopicManager>();
 builder.Services.AddScoped<IAiPlanSender, AiPlanSenderService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(UiCorsPolicy, policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:5141", "https://localhost:7284")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    var appVersionProvider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+    
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        foreach (var description in appVersionProvider.ApiVersionDescriptions)
+        {
+            options.SwaggerEndpoint(
+                $"/swagger/{description.GroupName}/swagger.json",
+                $"Plan API {description.GroupName.ToUpperInvariant()}"
+            );
+        }
+ 
+        options.RoutePrefix = string.Empty;
+    });
 }
 
 app.UseHttpsRedirection();
-app.UseCors(UiCorsPolicy);
 app.UseJwtMiddleware();
 
-app.MapGet("/", () => Results.Ok(new { status = "DietAI.Api is running" }));
-app.MapAuthEndpoints();
-app.MapPlanEndpoints();
+app.MapAuthEndpointsV1();
+app.MapPlanEndpointsV1();
 
 app.Run();
