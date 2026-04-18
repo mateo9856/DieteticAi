@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using DietAI.Api.Services.Login.Abstractions;
 using DietAI.Api.Services.Login.Models;
 using DietAI.Api.Services.Login.Requests;
+using DietAI.Api.Commands.Auth.Login;
+using MediatR;
 
 namespace DietAI.Api.Endpoints.V1;
 
@@ -13,9 +14,9 @@ public static class AuthEndpointsV1
         
         group.MapPost("/login", async (
                 LoginRequest request,
-                ILoginService loginService,
+                IMediator mediator,
                 CancellationToken cancellationToken) =>
-                await HandleLoginAsync(request, loginService, cancellationToken))
+                await HandleLoginAsync(request, mediator, cancellationToken))
             .WithName("LoginUser")
             .WithSummary("Authenticate a user and create a UI session")
             .Produces<LoginResponse>(StatusCodes.Status200OK)
@@ -28,19 +29,26 @@ public static class AuthEndpointsV1
 
     private static async Task<IResult> HandleLoginAsync(
         LoginRequest request,
-        ILoginService loginService,
+        IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var validationErrors = Validate(request);
-        if (validationErrors.Count > 0)
-        {
-            return Results.ValidationProblem(validationErrors);
-        }
-
         try
         {
-            var response = await loginService.LoginAsync(request, cancellationToken);
+            var command = new LoginCommand
+            {
+                Username = request.Username,
+                Password = request.Password
+            };
+
+            var response = await mediator.Send(command, cancellationToken);
             return Results.Ok(response);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return Results.ValidationProblem(errors);
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -56,31 +64,5 @@ public static class AuthEndpointsV1
                 detail: ex.Message,
                 statusCode: StatusCodes.Status500InternalServerError);
         }
-    }
-
-    private static Dictionary<string, string[]> Validate<T>(T request)
-    {
-        var validationResults = new List<ValidationResult>();
-        var validationContext = new ValidationContext(request!);
-
-        var isValid = Validator.TryValidateObject(
-            request!,
-            validationContext,
-            validationResults,
-            validateAllProperties: true);
-
-        if (isValid)
-        {
-            return new Dictionary<string, string[]>();
-        }
-
-        return validationResults
-            .SelectMany(
-                result => result.MemberNames.DefaultIfEmpty(string.Empty),
-                (result, memberName) => new { memberName, result.ErrorMessage })
-            .GroupBy(item => string.IsNullOrWhiteSpace(item.memberName) ? "request" : item.memberName)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(item => item.ErrorMessage ?? "Invalid value").ToArray());
     }
 }

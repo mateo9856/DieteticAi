@@ -15,6 +15,9 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using DietAI.Api;
 using DietAI.Api.Endpoints.V1;
+using MediatR;
+using DietAI.Api.Behaviors;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +63,11 @@ builder.Services.AddTransient<ISenderService, SenderService>();
 builder.Services.AddScoped<TopicManager>();
 builder.Services.AddScoped<IAiPlanSender, AiPlanSenderService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
 var app = builder.Build();
 

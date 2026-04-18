@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using DietAI.Api.Services.AiPlanSender.Abstractions;
 using DietAI.Api.Services.AiPlanSender.Models;
 using DietAI.Api.Services.AiPlanSender.Requests;
+using DietAI.Api.Commands.Plan.SendPlan;
+using DietAI.Api.Commands.Plan.UpdatePlan;
+using MediatR;
 
 namespace DietAI.Api.Endpoints.V1;
 
@@ -14,12 +16,9 @@ public static class PlanEndpointsV1
         group.MapPost("/send", async (
                 SendPlanRequest request,
                 HttpContext httpContext,
-                IAiPlanSender planSender,
+                IMediator mediator,
                 CancellationToken cancellationToken) =>
-                await HandleRequestAsync(
-                    request,
-                    httpContext,
-                    userId => planSender.SendPlanRequestAsync(userId, request, cancellationToken)))
+                await HandleSendPlanAsync(request, httpContext, mediator, cancellationToken))
             .WithName("SendPlanRequest")
             .WithSummary("Send a new diet plan request")
             .Produces<Diets>(StatusCodes.Status200OK)
@@ -31,12 +30,9 @@ public static class PlanEndpointsV1
         group.MapPost("/update", async (
                 SendUpdatePlanRequest request,
                 HttpContext httpContext,
-                IAiPlanSender planSender,
+                IMediator mediator,
                 CancellationToken cancellationToken) =>
-                await HandleRequestAsync(
-                    request,
-                    httpContext,
-                    userId => planSender.SendPlanUpdateAsync(userId, request, cancellationToken)))
+                await HandleUpdatePlanAsync(request, httpContext, mediator, cancellationToken))
             .WithName("SendPlanUpdate")
             .WithSummary("Send an update for an existing diet plan")
             .Produces<Diets>(StatusCodes.Status200OK)
@@ -48,17 +44,12 @@ public static class PlanEndpointsV1
         return app;
     }
 
-    private static async Task<IResult> HandleRequestAsync<TRequest>(
-        TRequest request,
+    private static async Task<IResult> HandleSendPlanAsync(
+        SendPlanRequest request,
         HttpContext httpContext,
-        Func<string, Task<Diets>> handler)
+        IMediator mediator,
+        CancellationToken cancellationToken)
     {
-        var validationErrors = Validate(request);
-        if (validationErrors.Count > 0)
-        {
-            return Results.ValidationProblem(validationErrors);
-        }
-
         var userId = httpContext.Request.Headers["X-User-Id"].FirstOrDefault()
             ?? httpContext.User.Identity?.Name;
 
@@ -69,8 +60,21 @@ public static class PlanEndpointsV1
 
         try
         {
-            var result = await handler(userId);
+            var command = new SendPlanCommand
+            {
+                UserId = userId,
+                Request = request
+            };
+
+            var result = await mediator.Send(command, cancellationToken);
             return Results.Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return Results.ValidationProblem(errors);
         }
         catch (TimeoutException ex)
         {
@@ -88,29 +92,51 @@ public static class PlanEndpointsV1
         }
     }
 
-    private static Dictionary<string, string[]> Validate<T>(T request)
+    private static async Task<IResult> HandleUpdatePlanAsync(
+        SendUpdatePlanRequest request,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
     {
-        var validationResults = new List<ValidationResult>();
-        var validationContext = new ValidationContext(request!);
+        var userId = httpContext.Request.Headers["X-User-Id"].FirstOrDefault()
+            ?? httpContext.User.Identity?.Name;
 
-        var isValid = Validator.TryValidateObject(
-            request!,
-            validationContext,
-            validationResults,
-            validateAllProperties: true);
-
-        if (isValid)
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            return new Dictionary<string, string[]>();
+            return Results.Unauthorized();
         }
 
-        return validationResults
-            .SelectMany(
-                result => result.MemberNames.DefaultIfEmpty(string.Empty),
-                (result, memberName) => new { memberName, result.ErrorMessage })
-            .GroupBy(item => string.IsNullOrWhiteSpace(item.memberName) ? "request" : item.memberName)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(item => item.ErrorMessage ?? "Invalid value").ToArray());
+        try
+        {
+            var command = new UpdatePlanCommand
+            {
+                UserId = userId,
+                Request = request
+            };
+
+            var result = await mediator.Send(command, cancellationToken);
+            return Results.Ok(result);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            var errors = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            return Results.ValidationProblem(errors);
+        }
+        catch (TimeoutException ex)
+        {
+            return Results.Problem(
+                title: "Diet plan update timed out",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(
+                title: "Failed to send diet plan update",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 }
