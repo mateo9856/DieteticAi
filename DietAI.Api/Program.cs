@@ -15,9 +15,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using DietAI.Api;
 using DietAI.Api.Endpoints.V1;
-using MediatR;
-using DietAI.Api.Behaviors;
-using FluentValidation;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +30,13 @@ builder.Services
     .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer();
+builder.Services.AddAuthorization();
 
 builder.Services.AddOpenApi();
 builder.Services.AddApiVersioning(options =>
@@ -52,7 +57,23 @@ builder.Services.AddApiVersioning(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token",
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        BearerFormat = "JWT",
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(document => new()
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 builder.Services.AddSingleton<JwtTokenService>();
@@ -63,11 +84,6 @@ builder.Services.AddTransient<ISenderService, SenderService>();
 builder.Services.AddScoped<TopicManager>();
 builder.Services.AddScoped<IAiPlanSender, AiPlanSenderService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
-
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
 var app = builder.Build();
 
@@ -92,6 +108,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseJwtMiddleware();
 
 app.MapAuthEndpointsV1();

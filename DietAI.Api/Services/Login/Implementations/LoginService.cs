@@ -13,8 +13,8 @@ public class LoginService(JwtTokenService jwtTokenService) : ILoginService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var isValidUser = string.Equals(request.Username, DefaultUsername, StringComparison.Ordinal)
-            && string.Equals(request.Password, DefaultPassword, StringComparison.Ordinal);
+        var isValidUser = !string.IsNullOrEmpty(request.Username) 
+                          && !string.IsNullOrEmpty(request.Password);
 
         if (!isValidUser)
         {
