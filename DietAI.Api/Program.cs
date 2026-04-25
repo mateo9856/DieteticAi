@@ -94,8 +94,8 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
 builder.Services.AddSingleton<JwtTokenService>();
-builder.Services.AddTransient<IRabbitConnectionFactory, RabbitConnectionFactory>();
-builder.Services.AddTransient<ITopicFactory, TopicFactory>();
+builder.Services.AddSingleton<IRabbitConnectionFactory, RabbitConnectionFactory>();
+builder.Services.AddSingleton<ITopicFactory, TopicFactory>();
 builder.Services.AddTransient<IReceiveService, ReceiverService>();
 builder.Services.AddTransient<ISenderService, SenderService>();
 builder.Services.AddScoped<TopicManager>();

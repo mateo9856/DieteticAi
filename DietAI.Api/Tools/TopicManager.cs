@@ -30,8 +30,6 @@ public class TopicManager
                 .WithUserName(_rabbitMqOptions.UserName)
                 .WithPassword(_rabbitMqOptions.Password)
                 .WithHostName(_rabbitMqOptions.HostName)
-                .WithPortNumber(_rabbitMqOptions.Port)
-                .WithTls(_rabbitMqOptions.CertPath)
                 .WithVirtualHost(_rabbitMqOptions.VirtualHost)
                 .PrepareConnectionAsync();
 

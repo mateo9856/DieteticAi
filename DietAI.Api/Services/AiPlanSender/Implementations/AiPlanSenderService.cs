@@ -4,6 +4,7 @@ using DietAI.Api.Services.AiPlanSender.Models;
 using DietAI.Api.Services.AiPlanSender.Requests;
 using DietAI.Api.Tools;
 using DietAI.RabbitServer.Abstractions;
+using RabbitMQ.Client.Exceptions;
 
 namespace DietAI.Api.Services.AiPlanSender.Implementations;
 
@@ -91,17 +92,23 @@ public class AiPlanSenderService : IAiPlanSender
         var startTime = DateTime.UtcNow;
         while (DateTime.UtcNow - startTime < timeout)
         {
-            var message = await _receiveService.GetMessageAsync(
-                $"{DietPlanResponseQueueName}:{requestId}",
-                autoAck: true);
-
-            if (message is not null)
+            try
             {
-                var body = message.Body.ToArray();
-                var json = System.Text.Encoding.UTF8.GetString(body);
-                var diet = JsonSerializer.Deserialize<Diets>(json);
+                var message = await _receiveService.GetMessageAsync(
+                    $"{DietPlanResponseQueueName}:{requestId}",
+                    autoAck: true);
 
-                return diet ?? throw new InvalidOperationException("Failed to deserialize diet response");
+                if (message is not null)
+                {
+                    var body = message.Body.ToArray();
+                    var json = System.Text.Encoding.UTF8.GetString(body);
+                    var diet = JsonSerializer.Deserialize<Diets>(json);
+
+                    return diet ?? throw new InvalidOperationException("Failed to deserialize diet response");
+                }
+            }
+            catch (OperationInterruptedException)
+            {
             }
 
             await Task.Delay(500, cts.Token);
