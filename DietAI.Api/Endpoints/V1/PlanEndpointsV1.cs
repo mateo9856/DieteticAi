@@ -53,7 +53,7 @@ public static class PlanEndpointsV1
         CancellationToken cancellationToken)
     {
         var userId = httpContext.Request.Headers["X-User-Id"].FirstOrDefault()
-            ?? httpContext.User.Identity?.Name;
+                     ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
 
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -101,7 +101,7 @@ public static class PlanEndpointsV1
         CancellationToken cancellationToken)
     {
         var userId = httpContext.Request.Headers["X-User-Id"].FirstOrDefault()
-            ?? httpContext.User.Identity?.Name;
+                     ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
 
         if (string.IsNullOrWhiteSpace(userId))
         {

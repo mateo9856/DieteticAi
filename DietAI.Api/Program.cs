@@ -1,3 +1,4 @@
+using System.Text;
 using DietAI.Api.Middleware;
 using DietAI.Api.Options;
 using DietAI.Api.Services;
@@ -15,6 +16,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using DietAI.Api;
 using DietAI.Api.Endpoints.V1;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,7 +37,22 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
 builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer();
+    .AddJwtBearer(options =>
+    {
+        var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName)
+            .Get<JwtOptions>();
+
+        options.TokenValidationParameters = new TokenValidationParameters()
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey))
+        };
+    });
 builder.Services.AddAuthorization();
 
 builder.Services.AddOpenApi();
@@ -108,9 +125,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseJwtMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseJwtMiddleware();
 
 app.MapAuthEndpointsV1();
 app.MapPlanEndpointsV1();

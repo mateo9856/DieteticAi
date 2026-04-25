@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using DietAI.Api.Services.Login.Models;
 using DietAI.Api.Services.Login.Requests;
 using DietAI.Api.Commands.Auth.Login;
