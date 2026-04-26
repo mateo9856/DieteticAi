@@ -71,11 +71,7 @@ public class AiPlanSenderService : IAiPlanSender
                 TimeSpan.FromSeconds(30),
                 cancellationToken);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new TimeoutException("Diet plan request timed out. The AI kernel did not respond in time.");
-        }
-        catch (Exception ex) when (ex is not TimeoutException)
+        catch (Exception ex) when (ex is not TimeoutException && ex is not OperationCanceledException)
         {
             throw new InvalidOperationException("Failed to send diet plan request", ex);
         }
@@ -86,11 +82,10 @@ public class AiPlanSenderService : IAiPlanSender
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(timeout);
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-        var startTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - startTime < timeout)
+        while (!timeoutCts.IsCancellationRequested)
         {
             try
             {
@@ -111,7 +106,23 @@ public class AiPlanSenderService : IAiPlanSender
             {
             }
 
-            await Task.Delay(500, cts.Token);
+            try
+            {
+                await Task.Delay(500, linkedCts.Token);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
         }
 
         throw new TimeoutException($"No response received for request {requestId}");

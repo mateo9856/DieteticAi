@@ -21,6 +21,12 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration
+    .SetBasePath(builder.Environment.ContentRootPath)
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
 builder.Services
     .AddOptions<RabbitMqOptions>()
     .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
@@ -122,6 +128,10 @@ if (app.Environment.IsDevelopment())
  
         options.RoutePrefix = string.Empty;
     });
+}
+else if (app.Environment.IsProduction())
+{
+    // think to use swagger or other api provider
 }
 
 app.UseHttpsRedirection();

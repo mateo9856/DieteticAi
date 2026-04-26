@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
@@ -23,6 +23,7 @@
     <ItemGroup>
         <ProjectReference Include="..\DieteticAi.Kernel\DietAI.AiKernel.csproj" />
         <ProjectReference Include="../DietAI.RabbitServer/DietAI.RabbitServer.csproj" />
+        <ProjectReference Include="..\DietAI.Api\DietAI.Api.csproj" />
     </ItemGroup>
 
     <ItemGroup>
