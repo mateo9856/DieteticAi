@@ -6,6 +6,7 @@ using DietAI.Api.Services.AiPlanSender.Abstractions;
 using DietAI.Api.Services.AiPlanSender.Implementations;
 using DietAI.Api.Services.Login.Abstractions;
 using DietAI.Api.Services.Login.Implementations;
+using DietAI.Api.Data;
 using DietAI.Api.Tools;
 using DietAI.RabbitServer.Abstractions;
 using DietAI.RabbitServer.Abstractions.RabbitConnection;
@@ -16,6 +17,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using DietAI.Api;
 using DietAI.Api.Endpoints.V1;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -38,6 +40,9 @@ builder.Services
     .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));

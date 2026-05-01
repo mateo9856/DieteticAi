@@ -13,4 +13,5 @@ public class Diets
     public decimal CaloricValue { get; set; }
     public SexEnum ForSex { get; set; }
     public DietType DietType { get; set; }
+    public string UserId { get; set; }  // Added userId field
 }
