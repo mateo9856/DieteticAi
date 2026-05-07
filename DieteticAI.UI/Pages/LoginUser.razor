@@ -1,8 +1,11 @@
 @page "/loadUser"
+@using DieteticAI.UI.Services.Login.Abstractions
+@using DieteticAI.UI.Services.Login.Requests
 @using DieteticAI.UI.Tools
 @inject SessionManager SessionManager
 @inject IConfiguration Configuration
 @inject NavigationManager Navigation
+@inject IUserLoginService UserLoginService
 
 <PageTitle>Load User</PageTitle>
 
@@ -46,31 +49,41 @@
                 {
                     <div class="login-form">
                         <h3>Login</h3>
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" @bind="Username" placeholder="Enter username" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" @bind="Password" placeholder="Enter password" />
-                        </div>
-                        <div class="mb-3">
-                            <button class="btn btn-outline-primary w-100 mb-2" @onclick="OidcLogin">
-                                <i class="bi bi-shield-lock"></i> OIDC Connect (Keycloak)
-                            </button>
-                            <button class="btn btn-primary w-100" @onclick="Login" disabled="@_isLoggingIn">
-                                @if (_isLoggingIn)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2">
-                                        Logging in...
-                                    </span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-box-arrow-in-right">Login</i>
-                                }
-                            </button>
-                        </div>
+
+                        <EditForm Model="@_loginRequest" OnValidSubmit="Login">
+                            <DataAnnotationsValidator />
+
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <InputText class="form-control" id="username" @bind-Value="_loginRequest.Username" placeholder="Enter username" />
+                                <ValidationMessage For="@(() => _loginRequest.Username)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <InputText type="password" class="form-control" id="password" @bind-Value="_loginRequest.Password" placeholder="Enter password" />
+                                <ValidationMessage For="@(() => _loginRequest.Password)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-outline-primary w-100 mb-2" @onclick="OidcLogin">
+                                    <i class="bi bi-shield-lock"></i> OIDC Connect (Keycloak)
+                                </button>
+                                <button type="submit" class="btn btn-primary w-100" disabled="@_isLoggingIn">
+                                    @if (_isLoggingIn)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Logging in...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-box-arrow-in-right"></i>
+                                        <span class="ms-1">Login</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+
                         @if (!string.IsNullOrEmpty(ErrorMessage))
                         {
                             <div class="alert alert-danger mt-3" role="alert">
@@ -80,9 +93,10 @@
                     </div>
                 }
             </div>
-            
-            @if(_isUserTestMode) {
-            <!-- Clear Session Button -->
+
+            @if (_isUserTestMode)
+            {
+                <!-- Clear Session Button -->
                 <div class="dietetic-form mt-3">
                     <button class="btn btn-danger w-100" @onclick="ClearSession" disabled="@(!SessionManager.IsUserLoaded)">
                         <i class="bi bi-trash"></i> Clear Session
@@ -94,27 +108,34 @@
 </div>
 
 @code {
-    private string Username { get; set; } = string.Empty;
-    private string Password { get; set; } = string.Empty;
-    private bool _isLoggingIn = false;
-    private bool _isUserTestMode = false;
+    private readonly LoginRequest _loginRequest = new();
+    private bool _isLoggingIn;
+    private bool _isUserTestMode;
     private string ErrorMessage { get; set; } = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Load user data if not already loaded
-        _isUserTestMode = Configuration["debugUser"] == "true";
+        _isUserTestMode = string.Equals(Configuration["debugUser"], "true", StringComparison.OrdinalIgnoreCase);
+
         if (!SessionManager.IsUserLoaded && _isUserTestMode)
         {
-            // Generate a unique ID (GUID)
-            var uniqueId = Guid.NewGuid().ToString();
-            SessionManager.UserId = uniqueId;
+            await LoginCoreAsync(new LoginRequest
+            {
+                Username = "admin",
+                Password = "password"
+            });
         }
     }
 
-    private async Task Login()
+    private Task Login() => LoginCoreAsync(new LoginRequest
     {
-        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        Username = _loginRequest.Username,
+        Password = _loginRequest.Password
+    });
+
+    private async Task LoginCoreAsync(LoginRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
             ErrorMessage = "Please enter both username and password";
             return;
@@ -125,21 +146,12 @@
 
         try
         {
-            // Simulate authentication (in real app, this would call an API)
-            if (Username == "admin" && Password == "password")
-            {
-                // Generate a unique ID (GUID)
-                var uniqueId = Guid.NewGuid().ToString();
-                SessionManager.UserId = uniqueId;
-            }
-            else
-            {
-                ErrorMessage = "Invalid username or password";
-            }
+            await UserLoginService.LoginAsync(request);
+            _loginRequest.Password = string.Empty;
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Login failed: " + ex.Message;
+            ErrorMessage = ex.Message;
         }
         finally
         {
@@ -147,14 +159,18 @@
         }
     }
 
-    private async Task OidcLogin()
+    private Task OidcLogin()
     {
-        
+        ErrorMessage = "OIDC login is not configured yet.";
+        return Task.CompletedTask;
     }
-    
+
     private void ClearSession()
     {
-        SessionManager.UserId = null;
+        UserLoginService.ClearSession();
+        _loginRequest.Username = string.Empty;
+        _loginRequest.Password = string.Empty;
+        ErrorMessage = string.Empty;
         Navigation.NavigateTo("/");
     }
 }
