@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Project Manager"
+  short_description: "Prepare business briefs and app ideas."
+  default_prompt: "Use this skill to clarify business logic, write AI Developer briefs, and propose practical DieteticAi project ideas."
