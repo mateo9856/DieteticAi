@@ -37,9 +37,6 @@ bld/
 # Visual Studio Code
 .vscode/
 
-# Claude Code
-.claude/
-
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*

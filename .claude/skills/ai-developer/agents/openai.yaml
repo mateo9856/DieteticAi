@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Developer"
+  short_description: "Develop app features and optimize application logic."
+  default_prompt: "Use this skill to implement a requested app feature or improve existing application logic in this repository."
