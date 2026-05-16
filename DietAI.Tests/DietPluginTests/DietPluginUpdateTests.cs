@@ -15,7 +15,7 @@ public class TestableDietPlugin : DietPlugin
     {
     }
 
-    public new Diets UpdatePlanForPrompt(int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
+    public Task<Diets> UpdatePlanForPrompt(int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
     {
         return base.UpdatePlanForPrompt(1, age, actualWeight, actualHeight, sex, dietType, caloricDemand, previousWeight, previousHeight, previousCaloricDemand);
     }
@@ -37,7 +37,7 @@ public class DietPluginUpdateTests
     }
 
     [Test]
-    public void UpdatePlanForPrompt_ReturnsUpdatedDiet_WhenKernelReturnsValidJson()
+    public async Task UpdatePlanForPrompt_ReturnsUpdatedDiet_WhenKernelReturnsValidJson()
     {
         // Arrange
         var expectedDiet = new Diets
@@ -61,7 +61,7 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(parsedData));
 
         // Act
-        var result = _dietPlugin.UpdatePlanForPrompt(
+        var result = await _dietPlugin.UpdatePlanForPrompt(
             age: 30,
             actualWeight: 75m,
             actualHeight: 175m,
@@ -92,8 +92,8 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(string.Empty));
 
         // Act & Assert
-        var exception = Assert.Throws<Exception>(() =>
-            _dietPlugin.UpdatePlanForPrompt(
+        var exception = Assert.ThrowsAsync<Exception>(async () =>
+            await _dietPlugin.UpdatePlanForPrompt(
                 age: 25,
                 actualWeight: 70m,
                 actualHeight: 170m,
@@ -116,8 +116,8 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>("Invalid json response"));
 
         // Act & Assert
-        var exception = Assert.Throws<Exception>(() =>
-            _dietPlugin.UpdatePlanForPrompt(
+        var exception = Assert.ThrowsAsync<Exception>(async () =>
+            await _dietPlugin.UpdatePlanForPrompt(
                 age: 35,
                 actualWeight: 85m,
                 actualHeight: 180m,
@@ -145,8 +145,8 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act & Assert
-        var exception = Assert.Throws<Exception>(() =>
-            _dietPlugin.UpdatePlanForPrompt(
+        var exception = Assert.ThrowsAsync<Exception>(async () =>
+            await _dietPlugin.UpdatePlanForPrompt(
                 age: 28,
                 actualWeight: 68m,
                 actualHeight: 165m,
@@ -162,7 +162,7 @@ public class DietPluginUpdateTests
     }
 
     [Test]
-    public void UpdatePlanForPrompt_PassesCorrectParametersToKernel()
+    public async Task UpdatePlanForPrompt_PassesCorrectParametersToKernel()
     {
         // Arrange
         var validJson = "{\"Id\":1,\"DietName\":\"Updated Plan\",\"Description\":\"Test\",\"Age\":40,\"ForWeight\":90,\"ForHeight\":185,\"CaloricValue\":2600,\"ForSex\":\"Male\",\"DietType\":\"Keto\"}";
@@ -171,7 +171,7 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
-        var result = _dietPlugin.UpdatePlanForPrompt(
+        var result = await _dietPlugin.UpdatePlanForPrompt(
             age: 40,
             actualWeight: 90m,
             actualHeight: 185m,
@@ -192,7 +192,7 @@ public class DietPluginUpdateTests
     }
 
     [Test]
-    public void UpdatePlanForPrompt_HandlesWeightLossScenario()
+    public async Task UpdatePlanForPrompt_HandlesWeightLossScenario()
     {
         // Arrange
         _mockDiets.Clear();
@@ -203,7 +203,7 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
-        var result = _dietPlugin.UpdatePlanForPrompt(
+        var result = await _dietPlugin.UpdatePlanForPrompt(
             age: 35,
             actualWeight: 85m,
             actualHeight: 180m,
@@ -223,7 +223,7 @@ public class DietPluginUpdateTests
     }
 
     [Test]
-    public void UpdatePlanForPrompt_HandlesWeightGainScenario()
+    public async Task UpdatePlanForPrompt_HandlesWeightGainScenario()
     {
         // Arrange
         _mockDiets.Clear();
@@ -234,7 +234,7 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
-        var result = _dietPlugin.UpdatePlanForPrompt(
+        var result = await _dietPlugin.UpdatePlanForPrompt(
             age: 25,
             actualWeight: 65m,
             actualHeight: 170m,
@@ -255,7 +255,7 @@ public class DietPluginUpdateTests
     }
 
     [Test]
-    public void UpdatePlanForPrompt_HandlesDifferentSexTypes()
+    public async Task UpdatePlanForPrompt_HandlesDifferentSexTypes()
     {
         // Arrange        
         _mockDiets.Clear();
@@ -266,7 +266,7 @@ public class DietPluginUpdateTests
             .Returns(ValueTask.FromResult<object?>(validJson));
 
         // Act
-        var result = _dietPlugin.UpdatePlanForPrompt(
+        var result = await _dietPlugin.UpdatePlanForPrompt(
             age: 30,
             actualWeight: 70m,
             actualHeight: 175m,
@@ -283,4 +283,3 @@ public class DietPluginUpdateTests
         result.ForSex.Should().Be(SexEnum.Unbinary);
     }
 }
-

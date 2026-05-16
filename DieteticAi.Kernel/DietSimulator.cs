@@ -1,22 +1,19 @@
 using DietAI.AiKernel.Models.DTOs;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
-using DieteticAi.Tools.Wrappers;
-using Microsoft.SemanticKernel;
 
 namespace DietAi.AiKernel;
 
 public class DietSimulator
 {
-    private DietPlugin _dietPlugin;
+    private readonly DietPlugin _dietPlugin;
 
-    public DietSimulator(Kernel kernel)
+    public DietSimulator(DietPlugin dietPlugin)
     {
-        _dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));
-        kernel.Plugins.AddFromObject(_dietPlugin, "DietPlugin");
+        _dietPlugin = dietPlugin;
     }
 
-    public Task Run(CancellationToken  cancellationToken = default)
+    public async Task Run(CancellationToken  cancellationToken = default)
     {
         Console.WriteLine("Enter your data, first age, next weight, sex(type Male, Female or Unbinary)");
         Console.WriteLine("Then type DietType, your height and caloric demand");
@@ -40,16 +37,14 @@ public class DietSimulator
                 DietType = dietType,
             };
 
-            var plan = _dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.ActualHeight,
+            var plan = await _dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.ActualHeight,
                 dto.CaloricDemand, dto.Sex, dto.DietType);
 
             Console.WriteLine($"Generated plan: \n{plan.Description}");
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return Task.FromException(e);
+            throw;
         }
-        
-        return Task.CompletedTask;
     }
 }

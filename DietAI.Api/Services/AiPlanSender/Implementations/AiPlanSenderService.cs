@@ -58,7 +58,7 @@ public class AiPlanSenderService : IAiPlanSender
 
             var requestWithContext = new PlanRequestWithContext<TRequest>
             {
-                SendPlanRequest = request,
+                Request = request,
                 UserId = userId,
                 RequestId = Guid.NewGuid().ToString(),
                 Timestamp = DateTime.UtcNow
@@ -131,7 +131,7 @@ public class AiPlanSenderService : IAiPlanSender
 
 internal sealed class PlanRequestWithContext<T> where T : SendPlanRequest
 {
-    public required T SendPlanRequest { get; init; }
+    public required T Request { get; init; }
     public required string UserId { get; init; }
     public required string RequestId { get; init; }
     public DateTime Timestamp { get; init; }

@@ -45,30 +45,44 @@ public class DietConcurrentRunner(
     
     private async Task OnCreateNewPlanReceived(object sender, BasicDeliverEventArgs ev)
     {
-        await Task.Run(async () =>
-        {
-            logger.LogInformation("Creating new plan");
-            var data = DeserializeConsumerData<PlanTopicRequest<HumanDataDto>>(ev.Body.ToArray());
-            await receiveService.AckMessageAsync(CreatePlanQueueName, ev);
-
-            var result = dietService.GenerateNewOrGetPlan(data.Request);
-
-            await senderService.SendToQueueAsync($"{DietPlanResponseQueueName}:{data.RequestId}", result, false);
-        });
+        await ProcessMessageAsync<HumanDataDto>(CreatePlanQueueName, ev, "Creating new plan");
     }
 
     private async Task OnUpdateNewPlanReceived(object sender, BasicDeliverEventArgs ev)
     {
-        await Task.Run(async () =>
+        await ProcessMessageAsync<UpdateHumanDataDto>(UpdatePlanQueueName, ev, "Updating plan");
+    }
+
+    private async Task ProcessMessageAsync<TRequest>(
+        string queueName,
+        BasicDeliverEventArgs ev,
+        string operationName)
+        where TRequest : HumanDataDto
+    {
+        try
         {
-            logger.LogInformation("Updating new plan");
-            var data = DeserializeConsumerData<PlanTopicRequest<UpdateHumanDataDto>>(ev.Body.ToArray());
-            await receiveService.AckMessageAsync(UpdatePlanQueueName, ev);
-            
-            var result = dietService.GenerateNewOrGetPlan(data.Request);
+            logger.LogInformation("{OperationName}", operationName);
+
+            var data = DeserializeConsumerData<PlanTopicRequest<TRequest>>(ev.Body.ToArray());
+            var result = data.Request switch
+            {
+                UpdateHumanDataDto updateRequest => await dietService.UpdateExistingPlan(updateRequest),
+                _ => await dietService.GenerateNewOrGetPlan(data.Request)
+            };
 
             await senderService.SendToQueueAsync($"{DietPlanResponseQueueName}:{data.RequestId}", result, false);
-        });
+            await receiveService.AckMessageAsync(queueName, ev);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Invalid payload received from queue {QueueName}", queueName);
+            await receiveService.RejectAsync(ev.DeliveryTag, requeue: false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to process message from queue {QueueName}", queueName);
+            await receiveService.RejectAsync(ev.DeliveryTag, requeue: true);
+        }
     }
 
     private T DeserializeConsumerData<T>(byte[] data)

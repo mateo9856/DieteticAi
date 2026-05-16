@@ -25,7 +25,15 @@ public class TopicFactory : ITopicFactory, IAsyncDisposable
             throw new ChannelClosedException("Channel is closed");
         }
         
-        return await ActiveChannel.QueueDeclareAsync(queueName, true, true, true, withArguments!);
+        IDictionary<string, object?>? queueArguments = withArguments?
+            .ToDictionary(static pair => pair.Key, static pair => (object?)pair.Value);
+
+        return await ActiveChannel.QueueDeclareAsync(
+            queueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: queueArguments);
     }
 
     public async ValueTask DisposeAsync()

@@ -1,7 +1,6 @@
 using DietAI.AiKernel.Models.DTOs;
 using DieteticAi.Models;
 using DieteticAi.Plugins;
-using DieteticAi.Tools.Wrappers;
 
 namespace DietAI.AiKernel.Services;
 
@@ -9,12 +8,12 @@ public class DietService
 {
     private readonly DietPlugin _dietPlugin;
 
-    public DietService(Microsoft.SemanticKernel.Kernel kernel)
+    public DietService(DietPlugin dietPlugin)
     {
-        _dietPlugin = new DietPlugin(new List<Diets>(), new KernelWrapper(kernel));
+        _dietPlugin = dietPlugin;
     }
 
-    public Diets GenerateNewOrGetPlan(HumanDataDto dto)
+    public Task<Diets> GenerateNewOrGetPlan(HumanDataDto dto)
     {
         return _dietPlugin.GetPlanFromListOrPrompt(dto.Age,
             dto.ActualWeight,
@@ -24,7 +23,7 @@ public class DietService
             dto.DietType);
     }
 
-    public Diets UpdateExistingPlan(UpdateHumanDataDto dto)
+    public Task<Diets> UpdateExistingPlan(UpdateHumanDataDto dto)
     {
         return _dietPlugin.UpdatePlanByPrompt(dto.Age,
             dto.PreviousAge,

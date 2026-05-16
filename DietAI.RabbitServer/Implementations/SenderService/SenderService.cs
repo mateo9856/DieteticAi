@@ -17,23 +17,41 @@ public class SenderService : ISenderService
 
     public async Task SendToQueueAsync(string queueName, string message, bool persistent = false)
     {
+        await _topicFactory.DeclareQueueAsync(queueName);
         var channel = EnsureChannelIsActive();
-        await channel.BasicPublishAsync(exchange: "", routingKey: queueName, body: Encoding.UTF8.GetBytes(message), mandatory: persistent);
+        await channel.BasicPublishAsync(
+            exchange: "",
+            routingKey: queueName,
+            mandatory: false,
+            basicProperties: CreateBasicProperties(persistent),
+            body: Encoding.UTF8.GetBytes(message));
     }
 
     public async Task SendToQueueAsync(string queueName, byte[] message, bool persistent = false)
     {
+        await _topicFactory.DeclareQueueAsync(queueName);
         var channel = EnsureChannelIsActive();
-        await channel.BasicPublishAsync(exchange: "", routingKey: queueName, body: message, mandatory: persistent);
+        await channel.BasicPublishAsync(
+            exchange: "",
+            routingKey: queueName,
+            mandatory: false,
+            basicProperties: CreateBasicProperties(persistent),
+            body: message);
     }
 
     public async Task SendToQueueAsync<T>(string queueName, T message, bool persistent = false)
     {
+        await _topicFactory.DeclareQueueAsync(queueName);
         var channel = EnsureChannelIsActive();
         var jsonMessage = JsonConvert.SerializeObject(message)
             ?? throw new ArgumentNullException(nameof(message), "Message serialization resulted is null");
 
-        await channel.BasicPublishAsync(exchange: "", routingKey: queueName, body: Encoding.UTF8.GetBytes(jsonMessage), mandatory: persistent);
+        await channel.BasicPublishAsync(
+            exchange: "",
+            routingKey: queueName,
+            mandatory: false,
+            basicProperties: CreateBasicProperties(persistent),
+            body: Encoding.UTF8.GetBytes(jsonMessage));
     }
 
     public async Task PublishToExchangeAsync(string exchangeName, string routingKey, string message, bool persistent = false)
@@ -73,4 +91,10 @@ public class SenderService : ISenderService
 
         return channel;
     }
+
+    private static BasicProperties CreateBasicProperties(bool persistent) =>
+        new()
+        {
+            Persistent = persistent
+        };
 }

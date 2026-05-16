@@ -10,6 +10,7 @@ namespace DieteticAi.Plugins;
 
 public class DietPlugin
 {
+    private static readonly TimeSpan ModelExecutionTimeout = TimeSpan.FromSeconds(20);
     private readonly IList<Diets> _diets;
     private readonly IKernelWrapper _kernelWrapper;
 
@@ -21,7 +22,7 @@ public class DietPlugin
 
     [KernelFunction("update_existing_plan")]
     [Description("Define previous plan and then update to new plan details.")]
-    public Diets UpdatePlanByPrompt(
+    public async Task<Diets> UpdatePlanByPrompt(
         [Description("Actual age of person")] int actualAge,
         [Description("Previous age of person")] int previousAge,
         [Description("Current weight in kg")] decimal currentWeight,
@@ -48,7 +49,7 @@ public class DietPlugin
             throw new Exception("Plan does not exist, please generate new plan.");
         }
 
-        var updatedPlan = UpdatePlanForPrompt(existingPlan.Id, actualAge, currentWeight, currentHeight, sex, dietType, currentCaloricDemand, previousWeight, previousHeight, previousCaloricDemand);
+        var updatedPlan = await UpdatePlanForPrompt(existingPlan.Id, actualAge, currentWeight, currentHeight, sex, dietType, currentCaloricDemand, previousWeight, previousHeight, previousCaloricDemand);
 
         var index = _diets.IndexOf(existingPlan);
         _diets[index] = updatedPlan;
@@ -58,7 +59,7 @@ public class DietPlugin
     
     [KernelFunction("get_diet_or_generate")]
     [Description("Find suggested plan if it exist, otherwise generate new plan.")]
-    public Diets GetPlanFromListOrPrompt(
+    public async Task<Diets> GetPlanFromListOrPrompt(
         [Description("Age of the person")] int age,
         [Description("Current weight in kg")] decimal currentWeight,
         [Description("Current height in cm")] decimal currentHeight,
@@ -91,19 +92,20 @@ public class DietPlugin
         }
 
         var parametrizeCaloric = currentCaloricDemand == 0 ? (decimal?)null : currentCaloricDemand;
-        var generatedDiet = GenerateNewPlanForPrompt(age, currentWeight, currentHeight, sex, dietType, parametrizeCaloric);
+        var generatedDiet = await GenerateNewPlanForPrompt(age, currentWeight, currentHeight, sex, dietType, parametrizeCaloric);
         _diets.Add(generatedDiet);
         
         return generatedDiet;
     }
 
-    protected virtual Diets GenerateNewPlanForPrompt(int age, decimal currentWeight, decimal currentHeight, SexEnum sex, DietType dietType, decimal? caloric)
+    protected virtual async Task<Diets> GenerateNewPlanForPrompt(int age, decimal currentWeight, decimal currentHeight, SexEnum sex, DietType dietType, decimal? caloric)
     {
         string promptBuilder = DietPrompts.CreatePlanPrompt(_diets.Count + 1);
         var kernelArguments = new KernelArguments
         {
             ["age"] = age,
             ["weight"] = currentWeight,
+            ["height"] = currentHeight,
             ["sex"] = sex.ToString(),
             ["dietType"] = dietType.ToString(),
         };
@@ -115,9 +117,7 @@ public class DietPlugin
             ";
             kernelArguments["caloricDemand"] = caloric.ToString();
         }
-        var functionResult = _kernelWrapper.InvokePromptAsync(promptBuilder, kernelArguments);
-
-        var returnedPlan = functionResult.ToString();
+        var returnedPlan = await InvokePromptWithTimeoutAsync(promptBuilder, kernelArguments);
         if (string.IsNullOrWhiteSpace(returnedPlan))
         {
             throw new Exception("Model returned empty response");
@@ -140,7 +140,7 @@ public class DietPlugin
         }
     }
 
-    protected virtual Diets UpdatePlanForPrompt(int id, int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
+    protected virtual async Task<Diets> UpdatePlanForPrompt(int id, int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
     {
         string promptBuilder = DietPrompts.UpdatePlanPrompt(id);
 
@@ -157,9 +157,7 @@ public class DietPlugin
             ["previousCaloricDemand"] = previousCaloricDemand.ToString()
         };
 
-        var functionResult = _kernelWrapper.InvokePromptAsync(promptBuilder, kernelArguments);
-
-        var returnedPlan = functionResult.ToString();
+        var returnedPlan = await InvokePromptWithTimeoutAsync(promptBuilder, kernelArguments);
         if (string.IsNullOrWhiteSpace(returnedPlan))
         {
             throw new Exception("Model returned empty response");
@@ -179,6 +177,23 @@ public class DietPlugin
         catch
         {
             throw new Exception("Error through Json parsing plan");
+        }
+    }
+
+    private async Task<string?> InvokePromptWithTimeoutAsync(string prompt, KernelArguments kernelArguments)
+    {
+        try
+        {
+            var functionResult = await _kernelWrapper
+                .InvokePromptAsync(prompt, kernelArguments)
+                .AsTask()
+                .WaitAsync(ModelExecutionTimeout);
+
+            return functionResult?.ToString();
+        }
+        catch (TimeoutException)
+        {
+            throw new TimeoutException("Execution model timeout, try again later.");
         }
     }
 }
