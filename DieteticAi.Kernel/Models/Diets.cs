@@ -19,4 +19,16 @@ public class Diets
     public SexEnum ForSex { get; set; }
     
     public DietType DietType { get; set; }
+
+    public GoalType GoalType { get; set; }
+
+    public ActivityLevel ActivityLevel { get; set; }
+
+    public int MealsPerDay { get; set; } = 3;
+
+    public List<string> Allergies { get; set; } = [];
+
+    public List<string> ExcludedIngredients { get; set; } = [];
+
+    public DateTime CreatedAtUtc { get; set; }
 }

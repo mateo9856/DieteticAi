@@ -17,7 +17,22 @@ public class TestableDietPlugin : DietPlugin
 
     public Task<Diets> UpdatePlanForPrompt(int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
     {
-        return base.UpdatePlanForPrompt(1, age, actualWeight, actualHeight, sex, dietType, caloricDemand, previousWeight, previousHeight, previousCaloricDemand);
+        return base.UpdatePlanForPrompt(
+            1,
+            age,
+            actualWeight,
+            actualHeight,
+            sex,
+            dietType,
+            caloricDemand,
+            previousWeight,
+            previousHeight,
+            previousCaloricDemand,
+            GoalType.MaintainWeight,
+            ActivityLevel.Sedentary,
+            3,
+            [],
+            []);
     }
 }
 

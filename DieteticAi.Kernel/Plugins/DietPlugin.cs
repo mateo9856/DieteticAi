@@ -1,6 +1,7 @@
 using System.ComponentModel;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using DieteticAi.Constaints;
 using DieteticAi.Models;
 using DieteticAi.Tools.Wrappers;
@@ -10,7 +11,7 @@ namespace DieteticAi.Plugins;
 
 public class DietPlugin
 {
-    private static readonly TimeSpan ModelExecutionTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan ModelExecutionTimeout = TimeSpan.FromSeconds(60);
     private readonly IList<Diets> _diets;
     private readonly IKernelWrapper _kernelWrapper;
 
@@ -32,7 +33,12 @@ public class DietPlugin
         [Description("Current caloric demand")] decimal currentCaloricDemand,
         [Description("Previous caloric demand")] decimal previousCaloricDemand,
         [Description("Sex of the Person (Male/Female/Unbinary)")] SexEnum sex,
-        [Description("Type of diet")]DietType dietType
+        [Description("Type of diet")] DietType dietType,
+        [Description("Weight goal")] GoalType goalType = GoalType.MaintainWeight,
+        [Description("Activity level")] ActivityLevel activityLevel = ActivityLevel.Sedentary,
+        [Description("Meals per day")] int mealsPerDay = 3,
+        [Description("Allergies to avoid")] IReadOnlyCollection<string>? allergies = null,
+        [Description("Ingredients to exclude")] IReadOnlyCollection<string>? excludedIngredients = null
         )
     {
         var existingPlans = _diets.Where(diet => 
@@ -41,7 +47,12 @@ public class DietPlugin
             && diet.ForHeight == previousHeight
             && diet.CaloricValue == previousCaloricDemand
             && diet.ForSex == sex
-            && diet.DietType == dietType);
+            && diet.DietType == dietType
+            && diet.GoalType == goalType
+            && diet.ActivityLevel == activityLevel
+            && diet.MealsPerDay == mealsPerDay
+            && PreferenceListsEqual(diet.Allergies, allergies)
+            && PreferenceListsEqual(diet.ExcludedIngredients, excludedIngredients));
 
         var existingPlan = existingPlans.FirstOrDefault();
         if (existingPlan is null)
@@ -49,7 +60,22 @@ public class DietPlugin
             throw new Exception("Plan does not exist, please generate new plan.");
         }
 
-        var updatedPlan = await UpdatePlanForPrompt(existingPlan.Id, actualAge, currentWeight, currentHeight, sex, dietType, currentCaloricDemand, previousWeight, previousHeight, previousCaloricDemand);
+        var updatedPlan = await UpdatePlanForPrompt(
+            existingPlan.Id,
+            actualAge,
+            currentWeight,
+            currentHeight,
+            sex,
+            dietType,
+            currentCaloricDemand,
+            previousWeight,
+            previousHeight,
+            previousCaloricDemand,
+            goalType,
+            activityLevel,
+            mealsPerDay,
+            allergies,
+            excludedIngredients);
 
         var index = _diets.IndexOf(existingPlan);
         _diets[index] = updatedPlan;
@@ -65,7 +91,12 @@ public class DietPlugin
         [Description("Current height in cm")] decimal currentHeight,
         [Description("Current caloric demand")] decimal currentCaloricDemand,
         [Description("Sex of the Person (Male/Female/Unbinary)")] SexEnum sex,
-        [Description("Type of diet")]DietType dietType
+        [Description("Type of diet")] DietType dietType,
+        [Description("Weight goal")] GoalType goalType = GoalType.MaintainWeight,
+        [Description("Activity level")] ActivityLevel activityLevel = ActivityLevel.Sedentary,
+        [Description("Meals per day")] int mealsPerDay = 3,
+        [Description("Allergies to avoid")] IReadOnlyCollection<string>? allergies = null,
+        [Description("Ingredients to exclude")] IReadOnlyCollection<string>? excludedIngredients = null
     )
     {
         var ageCorrect = (int a) => age >= 15 && (age - a <= 2);
@@ -78,7 +109,12 @@ public class DietPlugin
             && weightCorrect(d.ForWeight)
             && heightCorrect(d.ForHeight)
             && d.ForSex == sex
-            && d.DietType == dietType);
+            && d.DietType == dietType
+            && d.GoalType == goalType
+            && d.ActivityLevel == activityLevel
+            && d.MealsPerDay == mealsPerDay
+            && PreferenceListsEqual(d.Allergies, allergies)
+            && PreferenceListsEqual(d.ExcludedIngredients, excludedIngredients));
 
         Diets? findingPlan = null;
         if (currentCaloricDemand == 0)
@@ -92,15 +128,37 @@ public class DietPlugin
         }
 
         var parametrizeCaloric = currentCaloricDemand == 0 ? (decimal?)null : currentCaloricDemand;
-        var generatedDiet = await GenerateNewPlanForPrompt(age, currentWeight, currentHeight, sex, dietType, parametrizeCaloric);
+        var generatedDiet = await GenerateNewPlanForPrompt(
+            age,
+            currentWeight,
+            currentHeight,
+            sex,
+            dietType,
+            parametrizeCaloric,
+            goalType,
+            activityLevel,
+            mealsPerDay,
+            allergies,
+            excludedIngredients);
         _diets.Add(generatedDiet);
         
         return generatedDiet;
     }
 
-    protected virtual async Task<Diets> GenerateNewPlanForPrompt(int age, decimal currentWeight, decimal currentHeight, SexEnum sex, DietType dietType, decimal? caloric)
+    protected virtual async Task<Diets> GenerateNewPlanForPrompt(
+        int age,
+        decimal currentWeight,
+        decimal currentHeight,
+        SexEnum sex,
+        DietType dietType,
+        decimal? caloric,
+        GoalType goalType,
+        ActivityLevel activityLevel,
+        int mealsPerDay,
+        IReadOnlyCollection<string>? allergies,
+        IReadOnlyCollection<string>? excludedIngredients)
     {
-        string promptBuilder = DietPrompts.CreatePlanPrompt(_diets.Count + 1);
+        string promptBuilder = DietPrompts.CreatePlanPrompt(_diets.Count + 1) + PreferencePromptSection();
         var kernelArguments = new KernelArguments
         {
             ["age"] = age,
@@ -108,12 +166,17 @@ public class DietPlugin
             ["height"] = currentHeight,
             ["sex"] = sex.ToString(),
             ["dietType"] = dietType.ToString(),
+            ["goalType"] = goalType.ToString(),
+            ["activityLevel"] = activityLevel.ToString(),
+            ["mealsPerDay"] = mealsPerDay.ToString(),
+            ["allergies"] = FormatPreferenceList(allergies),
+            ["excludedIngredients"] = FormatPreferenceList(excludedIngredients),
         };
 
         if (caloric is not null)
         {
             promptBuilder += @"
-            - CaloricDemand:  {{caloricDemand}} kcal
+            - CaloricDemand:  {{$caloricDemand}} kcal
             ";
             kernelArguments["caloricDemand"] = caloric.ToString();
         }
@@ -125,24 +188,38 @@ public class DietPlugin
 
         try
         {
-            JsonDocument.Parse(returnedPlan);
-            var jsonOptions = new JsonSerializerOptions
-            {
-                Converters = { new JsonStringEnumConverter() },
-                PropertyNameCaseInsensitive = true
-            };
-            return JsonSerializer.Deserialize<Diets>(returnedPlan, jsonOptions) 
-                   ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
+            using var jsonDocument = JsonDocument.Parse(returnedPlan);
+            var diet = ParseDiet(
+                jsonDocument.RootElement,
+                fallbackHeight: currentHeight,
+                fallbackDietType: dietType);
+            ApplyPreferenceSnapshot(diet, goalType, activityLevel, mealsPerDay, allergies, excludedIngredients);
+            return diet;
         }
-        catch
+        catch (Exception ex)
         {
-            throw new Exception("Error through Json parsing plan");
+            throw new Exception($"Error through Json parsing plan. Model payload: {returnedPlan}", ex);
         }
     }
 
-    protected virtual async Task<Diets> UpdatePlanForPrompt(int id, int age, decimal actualWeight, decimal actualHeight, SexEnum sex, DietType dietType, decimal caloricDemand, decimal previousWeight, decimal previousHeight, decimal previousCaloricDemand)
+    protected virtual async Task<Diets> UpdatePlanForPrompt(
+        int id,
+        int age,
+        decimal actualWeight,
+        decimal actualHeight,
+        SexEnum sex,
+        DietType dietType,
+        decimal caloricDemand,
+        decimal previousWeight,
+        decimal previousHeight,
+        decimal previousCaloricDemand,
+        GoalType goalType,
+        ActivityLevel activityLevel,
+        int mealsPerDay,
+        IReadOnlyCollection<string>? allergies,
+        IReadOnlyCollection<string>? excludedIngredients)
     {
-        string promptBuilder = DietPrompts.UpdatePlanPrompt(id);
+        string promptBuilder = DietPrompts.UpdatePlanPrompt(id) + PreferencePromptSection();
 
         var kernelArguments = new KernelArguments
         {
@@ -154,7 +231,12 @@ public class DietPlugin
             ["caloricDemand"] = caloricDemand.ToString(),
             ["previousWeight"] = previousWeight.ToString(),
             ["previousHeight"] = previousHeight.ToString(),
-            ["previousCaloricDemand"] = previousCaloricDemand.ToString()
+            ["previousCaloricDemand"] = previousCaloricDemand.ToString(),
+            ["goalType"] = goalType.ToString(),
+            ["activityLevel"] = activityLevel.ToString(),
+            ["mealsPerDay"] = mealsPerDay.ToString(),
+            ["allergies"] = FormatPreferenceList(allergies),
+            ["excludedIngredients"] = FormatPreferenceList(excludedIngredients),
         };
 
         var returnedPlan = await InvokePromptWithTimeoutAsync(promptBuilder, kernelArguments);
@@ -165,18 +247,17 @@ public class DietPlugin
 
         try
         {
-            JsonDocument.Parse(returnedPlan);
-            var jsonOptions = new JsonSerializerOptions
-            {
-                Converters = { new JsonStringEnumConverter() },
-                PropertyNameCaseInsensitive = true
-            };
-            return JsonSerializer.Deserialize<Diets>(returnedPlan, jsonOptions) 
-                   ?? throw new Exception("Error through deserialize, unexpected error in returned prompt.");
+            using var jsonDocument = JsonDocument.Parse(returnedPlan);
+            var diet = ParseDiet(
+                jsonDocument.RootElement,
+                fallbackHeight: actualHeight,
+                fallbackDietType: dietType);
+            ApplyPreferenceSnapshot(diet, goalType, activityLevel, mealsPerDay, allergies, excludedIngredients);
+            return diet;
         }
-        catch
+        catch (Exception ex)
         {
-            throw new Exception("Error through Json parsing plan");
+            throw new Exception($"Error through Json parsing plan. Model payload: {returnedPlan}", ex);
         }
     }
 
@@ -195,5 +276,179 @@ public class DietPlugin
         {
             throw new TimeoutException("Execution model timeout, try again later.");
         }
+    }
+
+    private static string PreferencePromptSection() =>
+        @"
+            Meal preference constraints:
+            - GoalType: {{$goalType}}
+            - ActivityLevel: {{$activityLevel}}
+            - MealsPerDay: {{$mealsPerDay}}
+            - Allergies: {{$allergies}}. Treat allergies as strict safety exclusions.
+            - ExcludedIngredients: {{$excludedIngredients}}
+            ";
+
+    private static string FormatPreferenceList(IReadOnlyCollection<string>? values)
+    {
+        if (values is null || values.Count == 0)
+        {
+            return "None";
+        }
+
+        var nonEmptyValues = values.Where(value => !string.IsNullOrWhiteSpace(value));
+        return string.Join(", ", nonEmptyValues);
+    }
+
+    private static void ApplyPreferenceSnapshot(
+        Diets diet,
+        GoalType goalType,
+        ActivityLevel activityLevel,
+        int mealsPerDay,
+        IReadOnlyCollection<string>? allergies,
+        IReadOnlyCollection<string>? excludedIngredients)
+    {
+        diet.GoalType = goalType;
+        diet.ActivityLevel = activityLevel;
+        diet.MealsPerDay = mealsPerDay;
+        diet.Allergies = allergies?.ToList() ?? [];
+        diet.ExcludedIngredients = excludedIngredients?.ToList() ?? [];
+    }
+
+    private static Diets ParseDiet(
+        JsonElement rootElement,
+        decimal fallbackHeight,
+        DietType fallbackDietType)
+    {
+        if (rootElement.ValueKind != JsonValueKind.Object)
+        {
+            throw new JsonException("Model response is not a JSON object.");
+        }
+
+        return new Diets
+        {
+            Id = GetRequiredInt(rootElement, "Id"),
+            DietName = GetRequiredString(rootElement, "DietName"),
+            Description = GetRequiredString(rootElement, "Description"),
+            Age = GetRequiredInt(rootElement, "Age"),
+            ForWeight = GetRequiredDecimal(rootElement, "ForWeight"),
+            ForHeight = GetDecimalOrDefault(rootElement, "ForHeight", fallbackHeight),
+            CaloricValue = GetRequiredDecimal(rootElement, "CaloricValue"),
+            ForSex = GetRequiredEnum<SexEnum>(rootElement, "ForSex"),
+            DietType = GetEnumOrDefault(rootElement, "DietType", fallbackDietType)
+        };
+    }
+
+    private static string GetRequiredString(JsonElement rootElement, string propertyName)
+    {
+        if (!rootElement.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        return property.ValueKind == JsonValueKind.String
+            ? property.GetString() ?? throw new JsonException($"Property '{propertyName}' is null.")
+            : property.ToString();
+    }
+
+    private static int GetRequiredInt(JsonElement rootElement, string propertyName)
+    {
+        if (!rootElement.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var number))
+        {
+            return number;
+        }
+
+        var raw = property.ToString();
+        var match = Regex.Match(raw, @"-?\d+");
+        if (!match.Success || !int.TryParse(match.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+        {
+            throw new JsonException($"Property '{propertyName}' with value '{raw}' cannot be parsed as int.");
+        }
+
+        return parsed;
+    }
+
+    private static decimal GetRequiredDecimal(JsonElement rootElement, string propertyName)
+    {
+        if (!rootElement.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        if (property.ValueKind == JsonValueKind.Number && property.TryGetDecimal(out var number))
+        {
+            return number;
+        }
+
+        var raw = property.ToString();
+        var normalized = raw.Replace(',', '.');
+        var match = Regex.Match(normalized, @"-?\d+(\.\d+)?");
+        if (!match.Success || !decimal.TryParse(match.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+        {
+            throw new JsonException($"Property '{propertyName}' with value '{raw}' cannot be parsed as decimal.");
+        }
+
+        return parsed;
+    }
+
+    private static decimal GetDecimalOrDefault(JsonElement rootElement, string propertyName, decimal defaultValue)
+    {
+        if (!rootElement.TryGetProperty(propertyName, out _))
+        {
+            return defaultValue;
+        }
+
+        return GetRequiredDecimal(rootElement, propertyName);
+    }
+
+    private static TEnum GetRequiredEnum<TEnum>(JsonElement rootElement, string propertyName)
+        where TEnum : struct
+    {
+        if (!rootElement.TryGetProperty(propertyName, out var property))
+        {
+            throw new JsonException($"Missing required property '{propertyName}'.");
+        }
+
+        var raw = property.ToString();
+        if (Enum.TryParse<TEnum>(raw, true, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new JsonException($"Property '{propertyName}' with value '{raw}' cannot be parsed as {typeof(TEnum).Name}.");
+    }
+
+    private static TEnum GetEnumOrDefault<TEnum>(JsonElement rootElement, string propertyName, TEnum defaultValue)
+        where TEnum : struct
+    {
+        if (!rootElement.TryGetProperty(propertyName, out _))
+        {
+            return defaultValue;
+        }
+
+        return GetRequiredEnum<TEnum>(rootElement, propertyName);
+    }
+
+    private static bool PreferenceListsEqual(
+        IReadOnlyCollection<string>? actual,
+        IReadOnlyCollection<string>? expected)
+    {
+        var normalizedActual = NormalizePreferences(actual);
+        var normalizedExpected = NormalizePreferences(expected);
+
+        return normalizedActual.SequenceEqual(normalizedExpected, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string[] NormalizePreferences(IReadOnlyCollection<string>? values)
+    {
+        return (values ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 }

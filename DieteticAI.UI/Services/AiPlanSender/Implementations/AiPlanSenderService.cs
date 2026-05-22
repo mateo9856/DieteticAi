@@ -22,12 +22,26 @@ public class AiPlanSenderService : IAiPlanSender
     public Task<Diets> SendPlanRequestAsync(
         SendPlanRequest request,
         CancellationToken cancellationToken = default) =>
-        SendAsync("api/plan/send", request, cancellationToken);
+        SendAsync("v1/plan/send", request, cancellationToken);
 
     public Task<Diets> SendPlanUpdateAsync(
         SendUpdatePlanRequest update,
         CancellationToken cancellationToken = default) =>
-        SendAsync("api/plan/update", update, cancellationToken);
+        SendAsync("v1/plan/update", update, cancellationToken);
+
+    public async Task<IReadOnlyList<Diets>> GetPlanHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAuthorizedAsync(HttpMethod.Get, "v1/plan/history", null, cancellationToken);
+        var diets = await response.Content.ReadFromJsonAsync<List<Diets>>(cancellationToken: cancellationToken);
+        return diets ?? [];
+    }
+
+    public async Task<Diets> GetPlanHistoryDetailAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAuthorizedAsync(HttpMethod.Get, $"v1/plan/history/{id}", null, cancellationToken);
+        var diet = await response.Content.ReadFromJsonAsync<Diets>(cancellationToken: cancellationToken);
+        return diet ?? throw new InvalidOperationException("Failed to deserialize diet history response");
+    }
 
     private async Task<Diets> SendAsync<TRequest>(
         string uri,
@@ -40,32 +54,48 @@ public class AiPlanSenderService : IAiPlanSender
             throw new InvalidOperationException("User session must be loaded before requesting a diet plan");
         }
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, uri)
-        {
-            Content = JsonContent.Create(request)
-        };
+        using var response = await SendAuthorizedAsync(HttpMethod.Post, uri, JsonContent.Create(request), cancellationToken);
 
-        httpRequest.Headers.Add("X-User-Id", _sessionManager.UserId);
+        var diet = await response.Content.ReadFromJsonAsync<Diets>(cancellationToken: cancellationToken);
+        return diet ?? throw new InvalidOperationException("Failed to deserialize diet response");
+    }
+
+    private async Task<HttpResponseMessage> SendAuthorizedAsync(
+        HttpMethod method,
+        string uri,
+        HttpContent? content,
+        CancellationToken cancellationToken)
+    {
+        if (!_sessionManager.IsUserLoaded)
+        {
+            throw new InvalidOperationException("User session must be loaded before requesting a diet plan");
+        }
+
+        using var httpRequest = new HttpRequestMessage(method, uri)
+        {
+            Content = content
+        };
 
         if (!string.IsNullOrWhiteSpace(_sessionManager.AccessToken))
         {
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionManager.AccessToken);
         }
 
-        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+        var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
+            response.Dispose();
             throw new InvalidOperationException("User session must be loaded before requesting a diet plan");
         }
 
         if (!response.IsSuccessStatusCode)
         {
             var details = await response.Content.ReadAsStringAsync(cancellationToken);
+            response.Dispose();
             throw new InvalidOperationException($"Plan request failed: {details}");
         }
 
-        var diet = await response.Content.ReadFromJsonAsync<Diets>(cancellationToken: cancellationToken);
-        return diet ?? throw new InvalidOperationException("Failed to deserialize diet response");
+        return response;
     }
 }

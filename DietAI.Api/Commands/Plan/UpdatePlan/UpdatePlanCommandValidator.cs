@@ -1,4 +1,5 @@
 using FluentValidation;
+using DietAI.Api.Commands.Plan;
 
 namespace DietAI.Api.Commands.Plan.UpdatePlan;
 
@@ -32,5 +33,8 @@ public class UpdatePlanCommandValidator : AbstractValidator<UpdatePlanCommand>
 
         RuleFor(x => x.Request.PreviousHeight)
             .InclusiveBetween(10.00m, 300.00m);
+
+        RuleFor(x => x.Request)
+            .ValidMealPreferences();
     }
 }

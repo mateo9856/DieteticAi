@@ -1,4 +1,5 @@
 using FluentValidation;
+using DietAI.Api.Commands.Plan;
 
 namespace DietAI.Api.Commands.Plan.SendPlan;
 
@@ -23,5 +24,8 @@ public class SendPlanCommandValidator : AbstractValidator<SendPlanCommand>
 
         RuleFor(x => x.Request.DietType)
             .IsInEnum();
+
+        RuleFor(x => x.Request)
+            .ValidMealPreferences();
     }
 }

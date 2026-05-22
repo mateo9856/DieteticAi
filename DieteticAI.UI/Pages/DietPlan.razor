@@ -38,7 +38,7 @@
                         
                         <div class="col-md-6 mb-3">
                             <label for="height" class="form-label">Current Height (cm)</label>
-                            <InputNumber @bind-Value="planRequest.ActualHeight" class="form-control" id="weight" placeholder="Enter your weight" step="0.1" />
+                            <InputNumber @bind-Value="planRequest.ActualHeight" class="form-control" id="height" placeholder="Enter your height" step="0.1" />
                             <ValidationMessage For="@(() => planRequest.ActualHeight)" class="text-danger" />
                         </div>
                     </div>
@@ -55,7 +55,7 @@
                     
                     <div class="mb-4">
                         <label for="dietType" class="form-label">Diet Type</label>
-                            <InputSelect @bind-Value="planRequest.DietType" class="form-select" id="sex">
+                            <InputSelect @bind-Value="planRequest.DietType" class="form-select" id="dietType">
                                 <option value="@DietType.Standard">Standard</option>
                                 <option value="@DietType.Vegan">Vegan</option>
                                 <option value="@DietType.Vegetarian">Vegetarian</option>
@@ -66,6 +66,50 @@
                             </InputSelect>
                             <ValidationMessage For="@(() => planRequest.DietType)" class="text-danger" />
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="goalType" class="form-label">Goal</label>
+                            <InputSelect @bind-Value="planRequest.GoalType" class="form-select" id="goalType">
+                                <option value="@GoalType.MaintainWeight">Maintain weight</option>
+                                <option value="@GoalType.LoseWeight">Lose weight</option>
+                                <option value="@GoalType.GainWeight">Gain weight</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => planRequest.GoalType)" class="text-danger" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="activityLevel" class="form-label">Activity Level</label>
+                            <InputSelect @bind-Value="planRequest.ActivityLevel" class="form-select" id="activityLevel">
+                                <option value="@ActivityLevel.Sedentary">Sedentary</option>
+                                <option value="@ActivityLevel.Light">Light</option>
+                                <option value="@ActivityLevel.Moderate">Moderate</option>
+                                <option value="@ActivityLevel.Active">Active</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => planRequest.ActivityLevel)" class="text-danger" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="mealsPerDay" class="form-label">Meals Per Day</label>
+                            <InputNumber @bind-Value="planRequest.MealsPerDay" class="form-control" id="mealsPerDay" min="2" max="6" />
+                            <ValidationMessage For="@(() => planRequest.MealsPerDay)" class="text-danger" />
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="allergies" class="form-label">Allergies</label>
+                            <InputText @bind-Value="allergiesText" class="form-control" id="allergies" placeholder="Peanuts, shellfish" />
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <label for="excludedIngredients" class="form-label">Excluded Ingredients</label>
+                            <InputText @bind-Value="excludedIngredientsText" class="form-control" id="excludedIngredients" placeholder="Mushrooms, onions" />
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">@errorMessage</div>
+                    }
                     
                     <div class="text-center">
                         <button type="submit" class="btn btn-primary btn-lg" disabled="@isGenerating">
@@ -110,15 +154,69 @@
                                 <span class="diet-metric">Calories: @generatedDiet.CaloricValue kcal</span>
                             </div>
                             <div class="col-md-6">
-                                <span class="diet-metric">ID: @generatedDiet.Id</span>
+                                <span class="diet-metric">Meals: @generatedDiet.MealsPerDay per day</span>
                             </div>
                         </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <span class="diet-metric">Goal: @generatedDiet.GoalType</span>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="diet-metric">Activity: @generatedDiet.ActivityLevel</span>
+                            </div>
+                        </div>
+
+                        @if (generatedDiet.Allergies.Count > 0 || generatedDiet.ExcludedIngredients.Count > 0)
+                        {
+                            <div class="mt-3">
+                                @if (generatedDiet.Allergies.Count > 0)
+                                {
+                                    <p><strong>Allergies:</strong> @string.Join(", ", generatedDiet.Allergies)</p>
+                                }
+                                @if (generatedDiet.ExcludedIngredients.Count > 0)
+                                {
+                                    <p><strong>Excluded:</strong> @string.Join(", ", generatedDiet.ExcludedIngredients)</p>
+                                }
+                            </div>
+                        }
                     </div>
                 }
                 else
                 {
                     <div class="text-center">
                         <p class="text-muted">No diet plan generated yet. Please fill out the form above and click "Generate Diet Plan".</p>
+                    </div>
+                }
+            </div>
+
+            <div class="dietetic-form mt-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 class="h4 mb-0">Plan History</h2>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadHistory" disabled="@isLoadingHistory">Refresh</button>
+                </div>
+
+                @if (isLoadingHistory)
+                {
+                    <p class="text-muted">Loading history...</p>
+                }
+                else if (planHistory.Count == 0)
+                {
+                    <p class="text-muted">No saved plans yet.</p>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var plan in planHistory)
+                        {
+                            <button type="button" class="list-group-item list-group-item-action" @onclick="() => SelectHistoryPlan(plan.Id)">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <strong>@plan.DietName</strong>
+                                    <small>@FormatCreatedAt(plan.CreatedAtUtc)</small>
+                                </div>
+                                <small>@plan.GoalType, @plan.MealsPerDay meals, @plan.CaloricValue kcal</small>
+                            </button>
+                        }
                     </div>
                 }
             </div>
@@ -129,34 +227,103 @@
 @code {
     private SendPlanRequest planRequest = new();
     private Diets? generatedDiet;
+    private List<Diets> planHistory = [];
+    private string allergiesText = string.Empty;
+    private string excludedIngredientsText = string.Empty;
+    private string? errorMessage;
     private bool isGenerating = false;
     private bool showResults = false;
+    private bool isLoadingHistory = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistory();
+    }
 
     private async Task GenerateDietPlan()
     {
         isGenerating = true;
         showResults = false;
+        errorMessage = null;
         
         try
         {
             var dietExtensions = new DietsExtensions();
             planRequest.CaloricDemand = dietExtensions.CalculateCalories(planRequest.Age, planRequest.ActualWeight, planRequest.Sex);
+            planRequest.Allergies = ParsePreferenceText(allergiesText, 10, "Allergies");
+            planRequest.ExcludedIngredients = ParsePreferenceText(excludedIngredientsText, 20, "Excluded ingredients");
+
             var dietReq = await AiPlanSenderService.SendPlanRequestAsync(planRequest);
             if (dietReq is not null)
             {
                 generatedDiet = dietReq;
             }
             showResults = true;
+            await LoadHistory();
         }
         catch (Exception ex)
         {
-            // Handle error - you might want to show a toast notification
-            Console.WriteLine($"Error generating diet plan: {ex.Message}");
+            errorMessage = ex.Message;
         }
         finally
         {
             isGenerating = false;
         }
+    }
+
+    private async Task LoadHistory()
+    {
+        isLoadingHistory = true;
+        errorMessage = null;
+
+        try
+        {
+            planHistory = (await AiPlanSenderService.GetPlanHistoryAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoadingHistory = false;
+        }
+    }
+
+    private async Task SelectHistoryPlan(int id)
+    {
+        errorMessage = null;
+
+        try
+        {
+            generatedDiet = await AiPlanSenderService.GetPlanHistoryDetailAsync(id);
+            showResults = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private static List<string> ParsePreferenceText(string text, int maxItems, string fieldName)
+    {
+        var values = text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (values.Count > maxItems)
+        {
+            throw new InvalidOperationException($"{fieldName} cannot contain more than {maxItems} items.");
+        }
+
+        return values;
+    }
+
+    private static string FormatCreatedAt(DateTime createdAtUtc)
+    {
+        return createdAtUtc == default
+            ? string.Empty
+            : createdAtUtc.ToLocalTime().ToString("g");
     }
     
 }

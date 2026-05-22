@@ -24,4 +24,17 @@ public class SendPlanRequest
     public DietType DietType { get; set; }
     
     public decimal CaloricDemand { get; set; }
+
+    [Required]
+    public GoalType GoalType { get; set; }
+
+    [Required]
+    public ActivityLevel ActivityLevel { get; set; }
+
+    [Range(2, 6)]
+    public int MealsPerDay { get; set; } = 3;
+
+    public List<string> Allergies { get; set; } = [];
+
+    public List<string> ExcludedIngredients { get; set; } = [];
 }

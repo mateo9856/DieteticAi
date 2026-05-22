@@ -15,36 +15,24 @@ public class DietSimulator
 
     public async Task Run(CancellationToken  cancellationToken = default)
     {
-        Console.WriteLine("Enter your data, first age, next weight, sex(type Male, Female or Unbinary)");
-        Console.WriteLine("Then type DietType, your height and caloric demand");
-
-        try
+        var dto = new HumanDataDto
         {
-            var age = int.Parse(Console.ReadLine() ?? "0");
-            var weight = decimal.Parse(Console.ReadLine() ?? "0");
-            var sex = Enum.Parse<SexEnum>(Console.ReadLine() ?? "Unbinary");
-            var dietType = Enum.Parse<DietType>(Console.ReadLine() ?? "Standard");
-            var height = decimal.Parse(Console.ReadLine() ?? "0");
-            var caloricDemand = decimal.Parse(Console.ReadLine() ?? "0");
+            Age = 28,
+            ActualWeight = 78,
+            ActualHeight = 180,
+            Sex = SexEnum.Unbinary,
+            CaloricDemand = 0,
+            DietType = DietType.Standard,
+        };
 
-            var dto = new HumanDataDto
-            {
-                Age = age,
-                ActualWeight = weight,
-                ActualHeight = height,
-                Sex = sex,
-                CaloricDemand = caloricDemand,
-                DietType = dietType,
-            };
+        var plan = await _dietPlugin.GetPlanFromListOrPrompt(
+            dto.Age,
+            dto.ActualWeight,
+            dto.ActualHeight,
+            dto.CaloricDemand,
+            dto.Sex,
+            dto.DietType);
 
-            var plan = await _dietPlugin.GetPlanFromListOrPrompt(dto.Age, dto.ActualWeight, dto.ActualHeight,
-                dto.CaloricDemand, dto.Sex, dto.DietType);
-
-            Console.WriteLine($"Generated plan: \n{plan.Description}");
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        Console.WriteLine($"Generated plan: \n{plan.Description}");
     }
 }
