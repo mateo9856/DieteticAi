@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using DietAI.Api.Commands.Plan.History;
 using DietAI.Api.Services.AiPlanSender.Models;
 using DietAI.Api.Services.AiPlanSender.Requests;
 using DietAI.Api.Commands.Plan.SendPlan;
@@ -43,6 +45,30 @@ public static class PlanEndpointsV1
             .ProducesProblem(StatusCodes.Status500InternalServerError)
             .ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
+        group.MapGet("/history", async (
+                HttpContext httpContext,
+                IMediator mediator,
+                CancellationToken cancellationToken) =>
+                await HandleGetHistoryAsync(httpContext, mediator, cancellationToken))
+            .WithName("GetPlanHistory")
+            .WithSummary("Get saved diet plans for the current user")
+            .RequireAuthorization()
+            .Produces<IReadOnlyList<Diets>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/history/{id:int}", async (
+                int id,
+                HttpContext httpContext,
+                IMediator mediator,
+                CancellationToken cancellationToken) =>
+                await HandleGetHistoryDetailAsync(id, httpContext, mediator, cancellationToken))
+            .WithName("GetPlanHistoryDetail")
+            .WithSummary("Get one saved diet plan for the current user")
+            .RequireAuthorization()
+            .Produces<Diets>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 
@@ -52,8 +78,7 @@ public static class PlanEndpointsV1
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var userId = httpContext.Request.Headers["X-User-Id"].FirstOrDefault()
-                     ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+        var userId = GetCurrentUserId(httpContext);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -100,8 +125,7 @@ public static class PlanEndpointsV1
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var userId = httpContext.Request.Headers["X-User-Id"].FirstOrDefault()
-                     ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+        var userId = GetCurrentUserId(httpContext);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -140,5 +164,41 @@ public static class PlanEndpointsV1
                 detail: ex.Message,
                 statusCode: StatusCodes.Status500InternalServerError);
         }
+    }
+
+    private static async Task<IResult> HandleGetHistoryAsync(
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId(httpContext);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(new GetPlanHistoryQuery { UserId = userId }, cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetHistoryDetailAsync(
+        int id,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId(httpContext);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(new GetPlanHistoryDetailQuery { UserId = userId, Id = id }, cancellationToken);
+        return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
+    private static string? GetCurrentUserId(HttpContext httpContext)
+    {
+        return httpContext.User.FindFirst(ClaimTypes.Name)?.Value;
     }
 }

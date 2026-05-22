@@ -13,5 +13,11 @@ public class Diets
     public decimal CaloricValue { get; set; }
     public SexEnum ForSex { get; set; }
     public DietType DietType { get; set; }
-    public string UserId { get; set; }  // Added userId field
+    public string UserId { get; set; } = string.Empty;
+    public GoalType GoalType { get; set; }
+    public ActivityLevel ActivityLevel { get; set; }
+    public int MealsPerDay { get; set; } = 3;
+    public List<string> Allergies { get; set; } = [];
+    public List<string> ExcludedIngredients { get; set; } = [];
+    public DateTime CreatedAtUtc { get; set; }
 }

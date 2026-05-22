@@ -54,6 +54,44 @@ public class DietPluginTests
     }
 
     [Test]
+    public async Task GetPlanFromListOrPrompt_IncludesMealPreferencesInPromptArguments()
+    {
+        // Arrange
+        var mockData = _mockDiets.Find(d => d.Id == 1);
+        mockData.Description = "Preference plan";
+        var parsedData = JsonConvert.SerializeObject(mockData);
+        KernelArguments? capturedArguments = null;
+
+        _mockKernel.InvokePromptAsync(Arg.Any<string>(), Arg.Do<KernelArguments>(arguments => capturedArguments = arguments))
+            .Returns(ValueTask.FromResult<object?>(parsedData));
+
+        // Act
+        var result = await _dietPlugin.GetPlanFromListOrPrompt(
+            25,
+            70m,
+            170m,
+            2500,
+            SexEnum.Female,
+            DietType.HighProtein,
+            GoalType.LoseWeight,
+            ActivityLevel.Active,
+            5,
+            ["peanuts"],
+            ["mushrooms"]);
+
+        // Assert
+        capturedArguments.Should().NotBeNull();
+        capturedArguments!["goalType"].Should().Be(GoalType.LoseWeight.ToString());
+        capturedArguments["activityLevel"].Should().Be(ActivityLevel.Active.ToString());
+        capturedArguments["mealsPerDay"].Should().Be("5");
+        capturedArguments["allergies"].Should().Be("peanuts");
+        capturedArguments["excludedIngredients"].Should().Be("mushrooms");
+        result.GoalType.Should().Be(GoalType.LoseWeight);
+        result.ActivityLevel.Should().Be(ActivityLevel.Active);
+        result.MealsPerDay.Should().Be(5);
+    }
+
+    [Test]
     public async Task GetPlanFromListOrPrompt_ReturnsExistingPlan_WhenAgeIsWithinRange()
     {
         // Act - age 31 should match age 30 (within 2 year range)
@@ -100,4 +138,3 @@ public class DietPluginTests
         exception!.Message.Should().Be("Error through Json parsing plan");
     }
 }
-

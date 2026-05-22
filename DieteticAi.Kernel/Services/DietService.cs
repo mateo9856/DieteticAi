@@ -20,7 +20,12 @@ public class DietService
             dto.ActualHeight,
             dto.CaloricDemand,
             dto.Sex,
-            dto.DietType);
+            dto.DietType,
+            dto.GoalType,
+            dto.ActivityLevel,
+            dto.MealsPerDay,
+            dto.Allergies,
+            dto.ExcludedIngredients);
     }
 
     public Task<Diets> UpdateExistingPlan(UpdateHumanDataDto dto)
@@ -34,7 +39,12 @@ public class DietService
             dto.CaloricDemand,
             dto.PreviousCaloricDemand,
             dto.Sex,
-            dto.DietType);
+            dto.DietType,
+            dto.GoalType,
+            dto.ActivityLevel,
+            dto.MealsPerDay,
+            dto.Allergies,
+            dto.ExcludedIngredients);
     }
     
 }
