@@ -12,15 +12,9 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-8 col-xl-6">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1>👤 User Session</h1>
-                <p>Manage your user session and view your unique identifier</p>
-            </div>
-
             <!-- User Info Section -->
             <div class="dietetic-form">
-                @if (SessionManager.IsUserLoaded)
+                @if (_isUserTestMode)
                 {
                     <div class="alert alert-success" role="alert">
                         <h4 class="alert-heading">✅ User Loaded Successfully!</h4>
@@ -129,7 +123,7 @@
             {
                 Username = "admin",
                 Password = "password"
-            });
+            }, true);
         }
     }
 
@@ -139,7 +133,7 @@
         Password = _loginRequest.Password
     });
 
-    private async Task LoginCoreAsync(LoginRequest request)
+    private async Task LoginCoreAsync(LoginRequest request, bool isTestMode = false)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
@@ -149,7 +143,12 @@
 
         _isLoggingIn = true;
         ErrorMessage = string.Empty;
-
+        if (isTestMode)
+        {
+            SessionManager.UserId = Guid.CreateVersion7().ToString();
+            return;
+        }
+        
         try
         {
             await UserLoginService.LoginAsync(request);
