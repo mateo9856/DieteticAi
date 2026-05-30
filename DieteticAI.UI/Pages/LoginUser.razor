@@ -117,6 +117,12 @@
     {
         _isUserTestMode = string.Equals(Configuration["debugUser"], "true", StringComparison.OrdinalIgnoreCase);
 
+        if (TryCompleteKeycloakLogin())
+        {
+            Navigation.NavigateTo("/loadUser", replace: true);
+            return;
+        }
+
         if (!SessionManager.IsUserLoaded && _isUserTestMode)
         {
             await LoginCoreAsync(new LoginRequest
@@ -161,8 +167,43 @@
 
     private Task OidcLogin()
     {
-        ErrorMessage = "OIDC login is not configured yet.";
+        Navigation.NavigateTo(UserLoginService.GetKeycloakLoginUrl(), forceLoad: true);
         return Task.CompletedTask;
+    }
+
+    private bool TryCompleteKeycloakLogin()
+    {
+        var query = ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+
+        if (!query.TryGetValue("accessToken", out var accessToken)
+            || !query.TryGetValue("userId", out var userId)
+            || !query.TryGetValue("expiresAtUtc", out var expiresAtUtc)
+            || !DateTime.TryParse(expiresAtUtc, out var expiresAt))
+        {
+            return false;
+        }
+
+        UserLoginService.CompleteLogin(new()
+        {
+            UserId = userId,
+            AccessToken = accessToken,
+            ExpiresAtUtc = expiresAt.ToUniversalTime()
+        });
+
+        ErrorMessage = string.Empty;
+        return true;
+    }
+
+    private static Dictionary<string, string> ParseQuery(string query)
+    {
+        return query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=', 2))
+            .Where(parts => parts.Length == 2)
+            .ToDictionary(
+                parts => Uri.UnescapeDataString(parts[0]),
+                parts => Uri.UnescapeDataString(parts[1].Replace("+", " ")),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private void ClearSession()
@@ -174,4 +215,3 @@
         Navigation.NavigateTo("/");
     }
 }
-

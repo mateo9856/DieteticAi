@@ -4,6 +4,8 @@ using DietAI.Api.Options;
 using DietAI.Api.Services;
 using DietAI.Api.Services.AiPlanSender.Abstractions;
 using DietAI.Api.Services.AiPlanSender.Implementations;
+using DietAI.Api.Services.Keycloak.Abstractions;
+using DietAI.Api.Services.Keycloak.Implementations;
 using DietAI.Api.Services.Login.Abstractions;
 using DietAI.Api.Services.Login.Implementations;
 using DietAI.Api.Data;
@@ -41,6 +43,12 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services
+    .AddOptions<KeycloakOptions>()
+    .Bind(builder.Configuration.GetSection(KeycloakOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -51,7 +59,8 @@ builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>
     {
         var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName)
-            .Get<JwtOptions>();
+            .Get<JwtOptions>()
+            ?? throw new InvalidOperationException("JWT options are not configured.");
 
         options.TokenValidationParameters = new TokenValidationParameters()
         {
@@ -108,6 +117,7 @@ builder.Services.AddTransient<ISenderService, SenderService>();
 builder.Services.AddScoped<TopicManager>();
 builder.Services.AddScoped<IAiPlanSender, AiPlanSenderService>();
 builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddHttpClient<IKeycloakLoginService, KeycloakLoginService>();
 
 var app = builder.Build();
 

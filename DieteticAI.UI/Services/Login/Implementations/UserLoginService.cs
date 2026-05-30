@@ -12,7 +12,7 @@ public class UserLoginService(HttpClient httpClient, SessionManager sessionManag
 {
     public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.PostAsJsonAsync("api/auth/login", request, cancellationToken);
+        using var response = await httpClient.PostAsJsonAsync("v1/auth/login", request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -23,11 +23,18 @@ public class UserLoginService(HttpClient httpClient, SessionManager sessionManag
         var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("Failed to deserialize login response.");
 
-        sessionManager.UserId = loginResponse.UserId;
-        sessionManager.AccessToken = loginResponse.AccessToken;
-        sessionManager.TokenExpiresAt = loginResponse.ExpiresAtUtc;
+        CompleteLogin(loginResponse);
 
         return loginResponse;
+    }
+
+    public string GetKeycloakLoginUrl() => new Uri(httpClient.BaseAddress!, "v1/auth/keycloak/login").ToString();
+
+    public void CompleteLogin(LoginResponse response)
+    {
+        sessionManager.UserId = response.UserId;
+        sessionManager.AccessToken = response.AccessToken;
+        sessionManager.TokenExpiresAt = response.ExpiresAtUtc;
     }
 
     public void ClearSession() => sessionManager.Clear();
