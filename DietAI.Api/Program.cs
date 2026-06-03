@@ -162,6 +162,7 @@ else if (app.Environment.IsProduction())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(CorsPolicyName);
 app.UseJwtMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
