@@ -57,7 +57,8 @@ public sealed class KeycloakLoginService(
         var tokenResponse = await response.Content.ReadFromJsonAsync<KeycloakTokenResponse>(cancellationToken: cancellationToken)
             ?? throw new UnauthorizedAccessException("Keycloak token response was empty.");
 
-        var userId = await GetUserIdAsync(tokenResponse, cancellationToken);
+        var userInfo = await GetUserInfoAsync(tokenResponse, cancellationToken);
+        var userId = userInfo.UserId ?? GetUserIdFromToken(tokenResponse);
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new UnauthorizedAccessException("Keycloak response did not contain a user identifier.");
@@ -67,6 +68,7 @@ public sealed class KeycloakLoginService(
         return new LoginResponse
         {
             UserId = userId,
+            Email = userInfo.Email,
             AccessToken = accessToken,
             ExpiresAtUtc = jwtTokenService.GetTokenExpiration(accessToken)
         };
@@ -77,6 +79,7 @@ public sealed class KeycloakLoginService(
         var query = new Dictionary<string, string?>
         {
             ["userId"] = response.UserId,
+            ["email"] = response.Email,
             ["accessToken"] = response.AccessToken,
             ["expiresAtUtc"] = response.ExpiresAtUtc.ToString("O")
         };
@@ -84,7 +87,7 @@ public sealed class KeycloakLoginService(
         return BuildUri(_options.UiRedirectUri, null, query);
     }
 
-    private async Task<string?> GetUserIdAsync(
+    private async Task<(string? UserId, string? Email)> GetUserInfoAsync(
         KeycloakTokenResponse tokenResponse,
         CancellationToken cancellationToken)
     {
@@ -102,18 +105,25 @@ public sealed class KeycloakLoginService(
                     await userInfoResponse.Content.ReadAsStreamAsync(cancellationToken),
                     cancellationToken: cancellationToken);
 
-                if (TryGetString(document.RootElement, "sub", out var subject))
-                {
-                    return subject;
-                }
+                var userId = TryGetString(document.RootElement, "sub", out var subject)
+                    ? subject
+                    : TryGetString(document.RootElement, "preferred_username", out var preferredUsername)
+                        ? preferredUsername
+                        : null;
 
-                if (TryGetString(document.RootElement, "preferred_username", out var preferredUsername))
-                {
-                    return preferredUsername;
-                }
+                var email = TryGetString(document.RootElement, "email", out var userEmail)
+                    ? userEmail
+                    : null;
+
+                return (userId, email);
             }
         }
 
+        return (null, null);
+    }
+
+    private static string? GetUserIdFromToken(KeycloakTokenResponse tokenResponse)
+    {
         var token = !string.IsNullOrWhiteSpace(tokenResponse.IdToken)
             ? tokenResponse.IdToken
             : tokenResponse.AccessToken;

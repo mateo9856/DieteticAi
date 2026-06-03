@@ -4,6 +4,8 @@ public class SessionManager
 {
     public string? UserId { get; set; }
 
+    public string? UserEmail { get; set; }
+
     public string? AccessToken { get; set; }
 
     public DateTime? TokenExpiresAt { get; set; }
@@ -15,6 +17,7 @@ public class SessionManager
     public void Clear()
     {
         UserId = null;
+        UserEmail = null;
         AccessToken = null;
         TokenExpiresAt = null;
         IsActiveRabbitConnection = null;

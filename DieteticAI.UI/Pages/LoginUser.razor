@@ -14,11 +14,10 @@
         <div class="col-lg-8 col-xl-6">
             <!-- User Info Section -->
             <div class="dietetic-form">
-                @if (_isUserTestMode)
+                @if (SessionManager.IsUserLoaded)
                 {
                     <div class="alert alert-success" role="alert">
-                        <h4 class="alert-heading">✅ User Loaded Successfully!</h4>
-                        <p>Your user session has been initialized and is active.</p>
+                        <h4 class="alert-heading">User session active</h4>
                         <hr>
                         <div class="user-info">
                             <div class="row">
@@ -30,12 +29,16 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-12">
-                                    <small class="text-muted">
-                                        <i>This unique identifier is stored in your session and will persist throughout your session.</i>
-                                    </small>
+                                <div class="col-md-12 mb-3">
+                                    <strong>Email:</strong>
+                                    <div class="user-id-display">
+                                        <code>@GetUserEmailDisplay()</code>
+                                    </div>
                                 </div>
                             </div>
+                            <button class="btn btn-danger w-100" @onclick="Logout">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
                         </div>
                     </div>
                 }
@@ -60,7 +63,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <button type="button" class="btn btn-outline-primary w-100 mb-2" @onclick="OidcLogin">
+                                <button type="button" class="btn btn-keycloak w-100 mb-2" @onclick="OidcLogin">
                                     <i class="bi bi-shield-lock"></i> OIDC Connect (Keycloak)
                                 </button>
                                 <button type="submit" class="btn btn-primary w-100" disabled="@_isLoggingIn">
@@ -88,15 +91,6 @@
                 }
             </div>
 
-            @if (_isUserTestMode)
-            {
-                <!-- Clear Session Button -->
-                <div class="dietetic-form mt-3">
-                    <button class="btn btn-danger w-100" @onclick="ClearSession" disabled="@(!SessionManager.IsUserLoaded)">
-                        <i class="bi bi-trash"></i> Clear Session
-                    </button>
-                </div>
-            }
         </div>
     </div>
 </div>
@@ -146,6 +140,8 @@
         if (isTestMode)
         {
             SessionManager.UserId = Guid.CreateVersion7().ToString();
+            SessionManager.UserEmail = request.Username;
+            _isLoggingIn = false;
             return;
         }
         
@@ -185,6 +181,7 @@
         UserLoginService.CompleteLogin(new()
         {
             UserId = userId,
+            Email = query.GetValueOrDefault("email"),
             AccessToken = accessToken,
             ExpiresAtUtc = expiresAt.ToUniversalTime()
         });
@@ -205,12 +202,17 @@
                 StringComparer.OrdinalIgnoreCase);
     }
 
-    private void ClearSession()
+    private string GetUserEmailDisplay() =>
+        string.IsNullOrWhiteSpace(SessionManager.UserEmail)
+            ? "Email unavailable"
+            : SessionManager.UserEmail;
+
+    private void Logout()
     {
         UserLoginService.ClearSession();
         _loginRequest.Username = string.Empty;
         _loginRequest.Password = string.Empty;
         ErrorMessage = string.Empty;
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/loadUser");
     }
 }

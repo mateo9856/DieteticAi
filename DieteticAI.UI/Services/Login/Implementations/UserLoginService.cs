@@ -33,6 +33,7 @@ public class UserLoginService(HttpClient httpClient, SessionManager sessionManag
     public void CompleteLogin(LoginResponse response)
     {
         sessionManager.UserId = response.UserId;
+        sessionManager.UserEmail = response.Email;
         sessionManager.AccessToken = response.AccessToken;
         sessionManager.TokenExpiresAt = response.ExpiresAtUtc;
     }
