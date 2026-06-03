@@ -12,19 +12,12 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-8 col-xl-6">
-            <!-- Page Header -->
-            <div class="page-header">
-                <h1>👤 User Session</h1>
-                <p>Manage your user session and view your unique identifier</p>
-            </div>
-
             <!-- User Info Section -->
             <div class="dietetic-form">
                 @if (SessionManager.IsUserLoaded)
                 {
                     <div class="alert alert-success" role="alert">
-                        <h4 class="alert-heading">✅ User Loaded Successfully!</h4>
-                        <p>Your user session has been initialized and is active.</p>
+                        <h4 class="alert-heading">User session active</h4>
                         <hr>
                         <div class="user-info">
                             <div class="row">
@@ -36,12 +29,16 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-12">
-                                    <small class="text-muted">
-                                        <i>This unique identifier is stored in your session and will persist throughout your session.</i>
-                                    </small>
+                                <div class="col-md-12 mb-3">
+                                    <strong>Email:</strong>
+                                    <div class="user-id-display">
+                                        <code>@GetUserEmailDisplay()</code>
+                                    </div>
                                 </div>
                             </div>
+                            <button class="btn btn-danger w-100" @onclick="Logout">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
                         </div>
                     </div>
                 }
@@ -66,7 +63,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <button type="button" class="btn btn-outline-primary w-100 mb-2" @onclick="OidcLogin">
+                                <button type="button" class="btn btn-keycloak w-100 mb-2" @onclick="OidcLogin">
                                     <i class="bi bi-shield-lock"></i> OIDC Connect (Keycloak)
                                 </button>
                                 <button type="submit" class="btn btn-primary w-100" disabled="@_isLoggingIn">
@@ -94,15 +91,6 @@
                 }
             </div>
 
-            @if (_isUserTestMode)
-            {
-                <!-- Clear Session Button -->
-                <div class="dietetic-form mt-3">
-                    <button class="btn btn-danger w-100" @onclick="ClearSession" disabled="@(!SessionManager.IsUserLoaded)">
-                        <i class="bi bi-trash"></i> Clear Session
-                    </button>
-                </div>
-            }
         </div>
     </div>
 </div>
@@ -117,13 +105,19 @@
     {
         _isUserTestMode = string.Equals(Configuration["debugUser"], "true", StringComparison.OrdinalIgnoreCase);
 
+        if (TryCompleteKeycloakLogin())
+        {
+            Navigation.NavigateTo("/loadUser", replace: true);
+            return;
+        }
+
         if (!SessionManager.IsUserLoaded && _isUserTestMode)
         {
             await LoginCoreAsync(new LoginRequest
             {
                 Username = "admin",
                 Password = "password"
-            });
+            }, true);
         }
     }
 
@@ -133,7 +127,7 @@
         Password = _loginRequest.Password
     });
 
-    private async Task LoginCoreAsync(LoginRequest request)
+    private async Task LoginCoreAsync(LoginRequest request, bool isTestMode = false)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
@@ -143,7 +137,14 @@
 
         _isLoggingIn = true;
         ErrorMessage = string.Empty;
-
+        if (isTestMode)
+        {
+            SessionManager.UserId = Guid.CreateVersion7().ToString();
+            SessionManager.UserEmail = request.Username;
+            _isLoggingIn = false;
+            return;
+        }
+        
         try
         {
             await UserLoginService.LoginAsync(request);
@@ -161,17 +162,57 @@
 
     private Task OidcLogin()
     {
-        ErrorMessage = "OIDC login is not configured yet.";
+        Navigation.NavigateTo(UserLoginService.GetKeycloakLoginUrl(), forceLoad: true);
         return Task.CompletedTask;
     }
 
-    private void ClearSession()
+    private bool TryCompleteKeycloakLogin()
+    {
+        var query = ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query);
+
+        if (!query.TryGetValue("accessToken", out var accessToken)
+            || !query.TryGetValue("userId", out var userId)
+            || !query.TryGetValue("expiresAtUtc", out var expiresAtUtc)
+            || !DateTime.TryParse(expiresAtUtc, out var expiresAt))
+        {
+            return false;
+        }
+
+        UserLoginService.CompleteLogin(new()
+        {
+            UserId = userId,
+            Email = query.GetValueOrDefault("email"),
+            AccessToken = accessToken,
+            ExpiresAtUtc = expiresAt.ToUniversalTime()
+        });
+
+        ErrorMessage = string.Empty;
+        return true;
+    }
+
+    private static Dictionary<string, string> ParseQuery(string query)
+    {
+        return query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=', 2))
+            .Where(parts => parts.Length == 2)
+            .ToDictionary(
+                parts => Uri.UnescapeDataString(parts[0]),
+                parts => Uri.UnescapeDataString(parts[1].Replace("+", " ")),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private string GetUserEmailDisplay() =>
+        string.IsNullOrWhiteSpace(SessionManager.UserEmail)
+            ? "Email unavailable"
+            : SessionManager.UserEmail;
+
+    private void Logout()
     {
         UserLoginService.ClearSession();
         _loginRequest.Username = string.Empty;
         _loginRequest.Password = string.Empty;
         ErrorMessage = string.Empty;
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/loadUser");
     }
 }
-

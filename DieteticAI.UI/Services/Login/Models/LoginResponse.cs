@@ -4,6 +4,8 @@ public sealed class LoginResponse
 {
     public required string UserId { get; init; }
 
+    public string? Email { get; init; }
+
     public required string AccessToken { get; init; }
 
     public DateTime ExpiresAtUtc { get; init; }

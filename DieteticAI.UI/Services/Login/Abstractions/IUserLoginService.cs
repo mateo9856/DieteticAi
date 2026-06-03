@@ -7,5 +7,9 @@ public interface IUserLoginService
 {
     Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
+    string GetKeycloakLoginUrl();
+
+    void CompleteLogin(LoginResponse response);
+
     void ClearSession();
 }

@@ -45,6 +45,24 @@ a, .btn-link {
     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
+.btn-keycloak {
+    color: var(--white);
+    background-color: #4D4D4D;
+    border-color: #2F2F2F;
+    border-radius: 25px;
+    padding: 12px 30px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-keycloak:hover {
+    color: var(--white);
+    background-color: #2F2F2F;
+    border-color: #2F2F2F;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(77, 77, 77, 0.3);
+}
+
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem var(--white), 0 0 0 0.25rem var(--accent-green);
 }

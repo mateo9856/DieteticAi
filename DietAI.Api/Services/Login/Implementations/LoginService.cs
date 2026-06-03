@@ -27,6 +27,7 @@ public class LoginService(JwtTokenService jwtTokenService) : ILoginService
         return Task.FromResult(new LoginResponse
         {
             UserId = userId,
+            Email = request.Username,
             AccessToken = accessToken,
             ExpiresAtUtc = jwtTokenService.GetTokenExpiration(accessToken)
         });

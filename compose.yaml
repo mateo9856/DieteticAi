@@ -1,26 +1,19 @@
 ﻿services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    command: start-dev --import-realm
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./docker/keycloak/realm-dietetic-ai.json:/opt/keycloak/data/import/realm-dietetic-ai.json:ro
+
   rabbitmq:
     image: rabbitmq:4-management
     container_name: rabbitmq
     ports:
-      - "5671:5671"
-      - "15671:15671"
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASSWORD: admin
-    volumes:
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./ca.crt:/etc/rabbitmq/certs/ca/crt:ro
-      - ./server.crt:/etc/rabbitmq/certs/server.crt:ro
-      - ./server.key:/etc/rabbitmq/certs/server.key:ro
-      - rabbitmq_data:/var/lib/rabbitmq
-      - rabbitmq_log:/var/log/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-volumes:
-  rabbitmq_data:
-  rabbitmq_log:
+      - "5672:5672"
+      - "15672:15672"

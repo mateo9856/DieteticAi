@@ -6,6 +6,7 @@
 @using DieteticAI.UI.Services.AiPlanSender.Requests
 @using DieteticAI.UI.Tools
 @inject IAiPlanSender AiPlanSenderService
+@inject SessionManager SessionManager
 
 <PageTitle>Diet Plan Generator</PageTitle>
 
@@ -190,36 +191,39 @@
                 }
             </div>
 
-            <div class="dietetic-form mt-4">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h2 class="h4 mb-0">Plan History</h2>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadHistory" disabled="@isLoadingHistory">Refresh</button>
-                </div>
-
-                @if (isLoadingHistory)
-                {
-                    <p class="text-muted">Loading history...</p>
-                }
-                else if (planHistory.Count == 0)
-                {
-                    <p class="text-muted">No saved plans yet.</p>
-                }
-                else
-                {
-                    <div class="list-group">
-                        @foreach (var plan in planHistory)
-                        {
-                            <button type="button" class="list-group-item list-group-item-action" @onclick="() => SelectHistoryPlan(plan.Id)">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <strong>@plan.DietName</strong>
-                                    <small>@FormatCreatedAt(plan.CreatedAtUtc)</small>
-                                </div>
-                                <small>@plan.GoalType, @plan.MealsPerDay meals, @plan.CaloricValue kcal</small>
-                            </button>
-                        }
+            @if (IsLoggedIn)
+            {
+                <div class="dietetic-form mt-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="h4 mb-0">Plan History</h2>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadHistory" disabled="@isLoadingHistory">Refresh</button>
                     </div>
-                }
-            </div>
+
+                    @if (isLoadingHistory)
+                    {
+                        <p class="text-muted">Loading history...</p>
+                    }
+                    else if (planHistory.Count == 0)
+                    {
+                        <p class="text-muted">No saved plans yet.</p>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var plan in planHistory)
+                            {
+                                <button type="button" class="list-group-item list-group-item-action" @onclick="() => SelectHistoryPlan(plan.Id)">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <strong>@plan.DietName</strong>
+                                        <small>@FormatCreatedAt(plan.CreatedAtUtc)</small>
+                                    </div>
+                                    <small>@plan.GoalType, @plan.MealsPerDay meals, @plan.CaloricValue kcal</small>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -234,10 +238,14 @@
     private bool isGenerating = false;
     private bool showResults = false;
     private bool isLoadingHistory = false;
+    private bool IsLoggedIn => SessionManager.IsUserLoaded;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadHistory();
+        if (IsLoggedIn)
+        {
+            await LoadHistory();
+        }
     }
 
     private async Task GenerateDietPlan()
@@ -259,7 +267,10 @@
                 generatedDiet = dietReq;
             }
             showResults = true;
-            await LoadHistory();
+            if (IsLoggedIn)
+            {
+                await LoadHistory();
+            }
         }
         catch (Exception ex)
         {
@@ -273,6 +284,12 @@
 
     private async Task LoadHistory()
     {
+        if (!IsLoggedIn)
+        {
+            planHistory.Clear();
+            return;
+        }
+
         isLoadingHistory = true;
         errorMessage = null;
 
@@ -280,9 +297,9 @@
         {
             planHistory = (await AiPlanSenderService.GetPlanHistoryAsync()).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            errorMessage = ex.Message;
+            errorMessage = "Unexpected error was occurred, please contact with administrator";
         }
         finally
         {

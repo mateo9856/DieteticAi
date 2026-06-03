@@ -1,6 +1,8 @@
+using DietAI.Api.Commands.Auth.KeycloakLogin;
 using DietAI.Api.Services.Login.Models;
 using DietAI.Api.Services.Login.Requests;
 using DietAI.Api.Commands.Auth.Login;
+using DietAI.Api.Services.Keycloak.Abstractions;
 using MediatR;
 
 namespace DietAI.Api.Endpoints.V1;
@@ -22,6 +24,43 @@ public static class AuthEndpointsV1
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
+
+        group.MapGet("/keycloak/login", async (
+                HttpContext httpContext,
+                IMediator mediator,
+                CancellationToken cancellationToken) =>
+            {
+                var result = await mediator.Send(new KeycloakLoginCommand(), cancellationToken);
+                httpContext.Response.Cookies.Append(
+                    "DietAI.Keycloak.State",
+                    result.State,
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = httpContext.Request.IsHttps,
+                        SameSite = SameSiteMode.Lax,
+                        MaxAge = TimeSpan.FromMinutes(10)
+                    });
+
+                return Results.Redirect(result.LoginUri.ToString());
+            })
+            .WithName("LoginWithKeycloak")
+            .WithSummary("Redirect to Keycloak login")
+            .Produces(StatusCodes.Status302Found);
+
+        group.MapGet("/keycloak/callback", async (
+                string? code,
+                string? state,
+                string? error,
+                HttpContext httpContext,
+                IKeycloakLoginService keycloakLoginService,
+                CancellationToken cancellationToken) =>
+                await HandleKeycloakCallbackAsync(code, state, error, httpContext, keycloakLoginService, cancellationToken))
+            .WithName("CompleteKeycloakLogin")
+            .WithSummary("Complete Keycloak login and create a UI session")
+            .Produces(StatusCodes.Status302Found)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }
@@ -62,6 +101,50 @@ public static class AuthEndpointsV1
                 title: "Login failed",
                 detail: ex.Message,
                 statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    private static async Task<IResult> HandleKeycloakCallbackAsync(
+        string? code,
+        string? state,
+        string? error,
+        HttpContext httpContext,
+        IKeycloakLoginService keycloakLoginService,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            return Results.Problem(
+                title: "Keycloak login failed",
+                detail: error,
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        var expectedState = httpContext.Request.Cookies["DietAI.Keycloak.State"];
+        httpContext.Response.Cookies.Delete("DietAI.Keycloak.State");
+
+        if (string.IsNullOrWhiteSpace(code)
+            || string.IsNullOrWhiteSpace(state)
+            || string.IsNullOrWhiteSpace(expectedState)
+            || !string.Equals(state, expectedState, StringComparison.Ordinal))
+        {
+            return Results.Problem(
+                title: "Invalid Keycloak callback",
+                detail: "The login callback is missing required data or has an invalid state.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        try
+        {
+            var response = await keycloakLoginService.CompleteLoginAsync(code, cancellationToken);
+            return Results.Redirect(keycloakLoginService.BuildUiRedirectUri(response).ToString());
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Results.Problem(
+                title: "Keycloak login failed",
+                detail: ex.Message,
+                statusCode: StatusCodes.Status401Unauthorized);
         }
     }
 }
