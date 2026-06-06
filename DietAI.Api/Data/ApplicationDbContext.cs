@@ -18,7 +18,6 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Diets>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.Id);
             entity.Property(e => e.DietName).IsRequired();
             entity.Property(e => e.Description).IsRequired();
             entity.Property(e => e.UserId).IsRequired();
@@ -28,7 +27,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Allergies).IsRequired();
             entity.Property(e => e.ExcludedIngredients).IsRequired();
             entity.Property(e => e.CreatedAtUtc).IsRequired();
-            entity.HasIndex(e => new { e.UserId, e.CreatedAtUtc });
+            entity.HasIndex(e => new { e.UserId, e.CreatedAtUtc })
+                .HasDatabaseName("IX_Diets_UserId_CreatedAtUtc");
         });
     }
 }
