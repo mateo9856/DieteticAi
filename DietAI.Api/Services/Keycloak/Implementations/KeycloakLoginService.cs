@@ -1,11 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
 using DietAI.Api.Options;
 using DietAI.Api.Services.Keycloak.Abstractions;
 using DietAI.Api.Services.Keycloak.Models;
 using DietAI.Api.Services.Login.Models;
+using DietAI.Api.Data;
+using DietAI.Api.Services.AiPlanSender.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace DietAI.Api.Services.Keycloak.Implementations;
@@ -13,7 +15,8 @@ namespace DietAI.Api.Services.Keycloak.Implementations;
 public sealed class KeycloakLoginService(
     HttpClient httpClient,
     JwtTokenService jwtTokenService,
-    IOptions<KeycloakOptions> options) : IKeycloakLoginService
+    IOptions<KeycloakOptions> options,
+    ApplicationDbContext dbContext) : IKeycloakLoginService
 {
     private readonly KeycloakOptions _options = options.Value;
 
@@ -59,16 +62,27 @@ public sealed class KeycloakLoginService(
 
         var userInfo = await GetUserInfoAsync(tokenResponse, cancellationToken);
         var userId = userInfo.UserId ?? GetUserIdFromToken(tokenResponse);
+        var userMail = userInfo.Email ?? string.Empty;
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new UnauthorizedAccessException("Keycloak response did not contain a user identifier.");
         }
 
+        var isUserExistInDb = await IsKeycloakUserExist(userMail);
+        if (!isUserExistInDb)
+        {
+            await dbContext.AddAsync(new KeycloakUsers
+            {
+                UniqueId = userId,
+                Email = userMail
+            }, CancellationToken.None);
+        }
+        
         var accessToken = jwtTokenService.GenerateToken(userId);
         return new LoginResponse
         {
             UserId = userId,
-            Email = userInfo.Email,
+            Email = userMail,
             AccessToken = accessToken,
             ExpiresAtUtc = jwtTokenService.GetTokenExpiration(accessToken)
         };
@@ -122,6 +136,11 @@ public sealed class KeycloakLoginService(
         return (null, null);
     }
 
+    private async Task<bool> IsKeycloakUserExist(string email)
+    {
+        return await dbContext.KeycloakUsers.FirstOrDefaultAsync(el => el.Email == email) != null;
+    }
+    
     private static string? GetUserIdFromToken(KeycloakTokenResponse tokenResponse)
     {
         var token = !string.IsNullOrWhiteSpace(tokenResponse.IdToken)
